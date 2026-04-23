@@ -24,6 +24,7 @@ data "aws_ami" "ubuntu" {
 locals {
   ami_id      = var.ami_id != "" ? var.ami_id : data.aws_ami.ubuntu.id
   name_prefix = "${var.project_name}-${var.environment}"
+  data_device = "/dev/xvdf"
 }
 
 # ---------------------------------------------------------------------------
@@ -164,7 +165,7 @@ resource "aws_instance" "aidome" {
 
   user_data = templatefile("${path.module}/cloud-init.yaml", {
     has_data_volume = var.data_volume_size > 0
-    data_device     = "/dev/xvdf"
+    data_device     = local.data_device
   })
   user_data_replace_on_change = true
 
@@ -206,7 +207,7 @@ resource "aws_ebs_volume" "data" {
 resource "aws_volume_attachment" "data" {
   count = var.data_volume_size > 0 ? 1 : 0
 
-  device_name = "/dev/xvdf" # Must match data_device in cloud-init.yaml
+  device_name = local.data_device # Must match data_device in cloud-init.yaml
   volume_id   = aws_ebs_volume.data[0].id
   instance_id = aws_instance.aidome.id
 }
