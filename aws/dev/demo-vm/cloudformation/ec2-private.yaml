@@ -1,0 +1,142 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AIDome demo EC2 instance in a private subnet
+
+Parameters:
+  NamePrefix:
+    Type: String
+    Default: demo-vm
+    Description: Name prefix for created resources
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID where resources are created
+
+  PrivateSubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Private subnet ID for the demo VM
+
+  AmiId:
+    Type: AWS::EC2::Image::Id
+    Description: AMI ID for the demo VM
+
+  InstanceType:
+    Type: String
+    Default: t3.small
+    Description: EC2 instance type
+
+  KeyName:
+    Type: String
+    Default: ''
+    Description: Optional EC2 key pair name
+
+  IamInstanceProfileName:
+    Type: String
+    Default: ''
+    Description: Optional IAM instance profile name
+
+  AllowedSshCidr:
+    Type: String
+    Default: ''
+    Description: Optional CIDR allowed to SSH on port 22
+
+  RootVolumeSize:
+    Type: Number
+    Default: 30
+    # 30 GiB baseline for OS + Docker/workload artifacts; tune per workload.
+    Description: Root EBS volume size in GiB
+
+  RootDeviceName:
+    Type: String
+    Default: /dev/xvda
+    # Verify for your AMI; many Amazon Linux 2023/newer AMIs use /dev/xvda.
+    Description: Root block device name for the selected AMI (for example /dev/sda1 or /dev/xvda)
+
+  MetadataHopLimit:
+    Type: Number
+    Default: 1
+    Description: IMDSv2 hop limit (use 1 for strongest isolation, increase only if required)
+
+  CloudInitUserData:
+    Type: String
+    Default: ''
+    Description: Optional cloud-init content as a full string payload
+    NoEcho: true
+
+Conditions:
+  HasKeyName: !Not [!Equals [!Ref KeyName, '']]
+  HasInstanceProfile: !Not [!Equals [!Ref IamInstanceProfileName, '']]
+  HasAllowedSshCidr: !Not [!Equals [!Ref AllowedSshCidr, '']]
+  HasCloudInitUserData: !Not [!Equals [!Ref CloudInitUserData, '']]
+
+Resources:
+  VmPrivateSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Demo VM private-subnet security group
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        # Default-open egress for parity with existing Terraform template.
+        # Restrict to required CIDRs/endpoints for stricter least-privilege environments.
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: -1
+          CidrIpv6: ::/0
+      Tags:
+        - Key: Name
+          Value: !Sub '${NamePrefix}-private-sg'
+
+  VmSshIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: HasAllowedSshCidr
+    Properties:
+      GroupId: !Ref VmPrivateSecurityGroup
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      CidrIp: !Ref AllowedSshCidr
+      Description: Optional SSH access from provided CIDR
+
+  VmInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AmiId
+      InstanceType: !Ref InstanceType
+      KeyName: !If [HasKeyName, !Ref KeyName, !Ref 'AWS::NoValue']
+      IamInstanceProfile: !If [HasInstanceProfile, !Ref IamInstanceProfileName, !Ref 'AWS::NoValue']
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          AssociatePublicIpAddress: false
+          SubnetId: !Ref PrivateSubnetId
+          GroupSet:
+            - !Ref VmPrivateSecurityGroup
+      UserData: !If
+        - HasCloudInitUserData
+        - Fn::Base64: !Ref CloudInitUserData
+        - !Ref 'AWS::NoValue'
+      BlockDeviceMappings:
+        - DeviceName: !Ref RootDeviceName
+          Ebs:
+            VolumeSize: !Ref RootVolumeSize
+            VolumeType: gp3
+            Encrypted: true
+      MetadataOptions:
+        HttpEndpoint: enabled
+        # Require IMDSv2.
+        HttpTokens: required
+        HttpPutResponseHopLimit: !Ref MetadataHopLimit
+      Tags:
+        - Key: Name
+          Value: !Sub '${NamePrefix}-private-vm'
+
+Outputs:
+  InstanceId:
+    Description: ID of the private VM instance
+    Value: !Ref VmInstance
+
+  PrivateIp:
+    Description: Private IP of the VM instance
+    Value: !GetAtt VmInstance.PrivateIp
+
+  SecurityGroupId:
+    Description: Security group ID attached to the VM instance
+    Value: !Ref VmPrivateSecurityGroup

@@ -1,0 +1,354 @@
+#cloud-config
+#
+# AIDome Demo VM Cloud-Init Configuration
+# ==========================================
+# This cloud-init configuration sets up a secure demo VM for AIDome with:
+# - Hardened SSH configuration (ports 22 + 14022; 22 can be disabled after verification)
+# - Fail2ban intrusion prevention
+# - iptables firewall
+# - Docker Engine installation
+# - Python development environment
+#
+# References:
+# - https://cloudinit.readthedocs.io/
+# - https://cloudinit.readthedocs.io/en/latest/explanation/configuration.html
+# - https://docs.docker.com/engine/install/
+#
+# Version: 1.0
+# Last Updated: 2024-12-24
+# ==========================================
+
+preserve_hostname: false
+hostname: aidome-demo-vm
+fqdn: aidome-demo-vm.local
+ssh_pwauth: false
+
+# Timezone configuration
+timezone: UTC
+
+# APT configuration
+apt:
+  preserve_sources_list: true
+  conf: |
+    APT::Periodic::Update-Package-Lists "1";
+    APT::Periodic::Unattended-Upgrade "1";
+    APT::Install-Recommends "false";
+    APT::Get::Assume-Yes "true";
+    Dpkg::Options::="--force-confdef";
+    Dpkg::Options::="--force-confold";
+
+# Boot commands - run before cloud-init modules (best practice for critical setup)
+bootcmd:
+  - [ cloud-init-per, instance, mkdir-iptables, mkdir, -p, /etc/iptables ]
+  - [ cloud-init-per, instance, set-noninteractive, sh, -c, 'echo "debconf debconf/frontend select Noninteractive" | debconf-set-selections' ]
+
+write_files:
+  # SSH listen on ports 22 and 14022 (drop-in keeps vendor defaults intact)
+  - path: /etc/ssh/sshd_config.d/port-14022.conf
+    permissions: '0644'
+    owner: root:root
+    content: |
+      Port 22
+      Port 14022
+      AddressFamily any
+
+      # Authentication
+      PermitRootLogin no
+      PasswordAuthentication no
+      PubkeyAuthentication yes
+      ChallengeResponseAuthentication no
+      UsePAM yes
+
+      # Security hardening
+      MaxAuthTries 3
+      MaxSessions 10
+      LoginGraceTime 60
+      ClientAliveInterval 300
+      ClientAliveCountMax 2
+
+      # Disable insecure features
+      PermitEmptyPasswords no
+      X11Forwarding no
+      PrintMotd no
+      PrintLastLog yes
+      TCPKeepAlive yes
+      Compression no
+      AllowTcpForwarding yes
+      AllowAgentForwarding yes
+      GatewayPorts no
+      PermitTunnel no
+
+  # System banner for SSH connections
+  - path: /etc/issue.net
+    permissions: '0644'
+    owner: root:root
+    content: |
+      ******************************************************************
+      *                    AIDome Demo VM System                      *
+      *                                                                *
+      *  WARNING: Unauthorized access is prohibited and will be       *
+      *  prosecuted to the full extent of the law.                    *
+      *                                                                *
+      *  All activities on this system are monitored and logged.      *
+      ******************************************************************
+
+  # MOTD
+  - path: /etc/motd
+    permissions: '0644'
+    owner: root:root
+    content: |
+
+      Welcome to AIDome Demo VM
+      =========================
+
+      System Information:
+      - Hostname: aidome-demo-vm
+      - Python venv: /opt/aidome_dev_venv
+      - Docker: Docker Engine (rootful)
+
+      Quick Start:
+      1. Open root shell: sudo -i
+      2. Activate Python venv: source /opt/aidome_dev_venv/bin/activate
+      3. Check Docker: docker ps
+      4. Check firewall rules: sudo iptables -L -n
+
+      After verification (recommended):
+      - Disable SSH: sudo systemctl disable --now ssh
+
+      Documentation: See /var/log/cloud-init.log and /etc/motd
+
+      Last cloud-init run: Check /var/log/cloud-init.log
+
+  # Sysctl security hardening
+  - path: /etc/sysctl.d/99-aidome-security.conf
+    permissions: '0644'
+    owner: root:root
+    content: |
+      # Security Configuration
+      # IP Forwarding (needed for VPNs)
+      net.ipv4.ip_forward = 1
+      net.ipv6.conf.all.forwarding = 1
+
+      # Network security
+      net.ipv4.conf.all.rp_filter = 1
+      net.ipv4.conf.default.rp_filter = 1
+      net.ipv4.conf.all.accept_source_route = 0
+      net.ipv4.conf.default.accept_source_route = 0
+      net.ipv4.conf.all.accept_redirects = 0
+      net.ipv4.conf.default.accept_redirects = 0
+      net.ipv4.conf.all.secure_redirects = 0
+      net.ipv4.conf.default.secure_redirects = 0
+      net.ipv4.conf.all.send_redirects = 0
+      net.ipv4.conf.default.send_redirects = 0
+      net.ipv4.icmp_echo_ignore_broadcasts = 1
+      net.ipv4.icmp_ignore_bogus_error_responses = 1
+
+      # IPv6 security
+      net.ipv6.conf.all.accept_redirects = 0
+      net.ipv6.conf.default.accept_redirects = 0
+      net.ipv6.conf.all.accept_source_route = 0
+      net.ipv6.conf.default.accept_source_route = 0
+
+      # TCP hardening
+      net.ipv4.tcp_syncookies = 1
+      net.ipv4.tcp_max_syn_backlog = 2048
+      net.ipv4.tcp_synack_retries = 2
+      net.ipv4.tcp_syn_retries = 5
+
+      # Kernel security
+      kernel.dmesg_restrict = 1
+      kernel.kptr_restrict = 2
+      kernel.yama.ptrace_scope = 1
+
+      # File system security
+      fs.suid_dumpable = 0
+      fs.protected_hardlinks = 1
+      fs.protected_symlinks = 1
+
+  # Fail2ban jail for SSH on ports 22 and 14022
+  - path: /etc/fail2ban/jail.d/sshd-multiport.local
+    permissions: '0644'
+    owner: root:root
+    content: |
+      [sshd]
+      enabled  = true
+      port     = 22,14022
+      filter   = sshd
+      logpath  = %(sshd_log)s
+      maxretry = 5
+      bantime  = 3600  # 1 hour in seconds
+      findtime = 600   # 10 minutes in seconds
+
+      [DEFAULT]
+      # WARNING: Update email addresses before production
+      destemail = root@localhost
+      sender = fail2ban@aidome-demo-vm
+      action = %(action_)s
+
+  # IPv4 firewall - SSH on ports 22 and 14022
+  - path: /etc/iptables/rules.v4
+    permissions: '0644'
+    owner: root:root
+    content: |
+      # Allow only specific inbound:
+      # - SSH on ports 22/14022 (22 intended for initial boot; disable after verification)
+      # - HTTPS (443/tcp)
+      # Host-level defense-in-depth:
+      # - Restrict 14022/443 to RFC1918 private space for private-subnet access.
+      # - Also enforce source filtering at AWS Security Group/NACL level.
+      *filter
+      :INPUT DROP [0:0]
+      :FORWARD DROP [0:0]
+      :OUTPUT ACCEPT [0:0]
+
+      # Allow loopback and established/related
+      -A INPUT -i lo -j ACCEPT
+      -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+      -A INPUT -p icmp --icmp-type echo-request -j ACCEPT
+
+      # SSH on port 22 (temporary initial access)
+      -A INPUT -p tcp --dport 22 -j ACCEPT
+
+      # SSH on port 14022 from RFC1918 private IPv4 ranges
+      -A INPUT -s 10.0.0.0/8 -p tcp --dport 14022 -j ACCEPT
+      -A INPUT -s 172.16.0.0/12 -p tcp --dport 14022 -j ACCEPT
+      -A INPUT -s 192.168.0.0/16 -p tcp --dport 14022 -j ACCEPT
+
+      # HTTPS from RFC1918 private IPv4 ranges
+      -A INPUT -s 10.0.0.0/8 -p tcp --dport 443 -j ACCEPT
+      -A INPUT -s 172.16.0.0/12 -p tcp --dport 443 -j ACCEPT
+      -A INPUT -s 192.168.0.0/16 -p tcp --dport 443 -j ACCEPT
+
+      COMMIT
+
+  # IPv6 firewall - SSH on ports 22 and 14022
+  - path: /etc/iptables/rules.v6
+    permissions: '0644'
+    owner: root:root
+    content: |
+      *filter
+      :INPUT DROP [0:0]
+      :FORWARD DROP [0:0]
+      :OUTPUT ACCEPT [0:0]
+      # Host-level defense-in-depth:
+      # - Restrict 14022/443 to ULA IPv6 space (fc00::/7).
+      # - Also enforce source filtering at AWS Security Group/NACL level.
+
+      # Allow loopback and established/related
+      -A INPUT -i lo -j ACCEPT
+      -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+      # SSH over IPv6 on port 22 (temporary initial access)
+      -A INPUT -p tcp --dport 22 -j ACCEPT
+
+      # SSH over IPv6 on port 14022 from ULA space
+      -A INPUT -s fc00::/7 -p tcp --dport 14022 -j ACCEPT
+
+      # HTTPS over IPv6 from ULA space
+      -A INPUT -s fc00::/7 -p tcp --dport 443 -j ACCEPT
+
+      COMMIT
+
+# Package management
+package_update: true
+package_upgrade: true
+
+# Packages to install - better than using apt-get in runcmd
+packages:
+  - vim
+  - curl
+  - htop
+  - wget
+  - ca-certificates
+  - python3
+  - python3-pip
+  - python3-venv
+  - git
+  - snmp
+  - net-tools
+  - dnsutils
+  - iproute2
+  - traceroute
+  - mtr
+  - telnet
+  - iptables-persistent
+  - netfilter-persistent
+  - fail2ban
+  - unattended-upgrades
+
+runcmd:
+  - 'echo "### AIDome Demo VM Bootstrap Starting..."'
+  - 'echo "Start time: $(date)"'
+
+  # Apply sysctl
+  - 'sysctl -p /etc/sysctl.d/99-aidome-security.conf || echo "Warning: sysctl failed"'
+
+  # Create critical directories early
+  - 'mkdir -p /etc/iptables || echo "Warning: Failed to create /etc/iptables directory"'
+
+  # SSH restart
+  - sleep 2
+  - 'sudo systemctl restart ssh || systemctl restart sshd || echo "Warning: SSH restart failed"'
+  - 'echo "SSH restarted with ports 22 and 14022"'
+
+  # Fail2ban
+  - 'sudo systemctl enable fail2ban || true'
+  - 'sudo systemctl restart fail2ban || echo "Warning: fail2ban failed"'
+
+  # Display system information
+  - 'echo "System Information:"'
+  - 'cat /etc/os-release || true'
+  - 'echo "Kernel: $(uname -r)"'
+
+  # Set up Python virtual environment
+  - 'echo "Setting up Python virtual environment..."'
+  - 'python3 -m venv /opt/aidome_dev_venv || echo "Warning: Python venv creation failed"'
+  - '/opt/aidome_dev_venv/bin/pip install --upgrade pip 2>/dev/null || echo "Warning: pip upgrade failed"'
+  - 'echo "Python venv setup completed"'
+
+  # Install Docker Engine (rootful)
+  - 'echo "Installing Docker Engine..."'
+  - |
+    curl -fsSL https://get.docker.com -o /tmp/get-docker.sh || {
+      echo "Warning: Docker install script download failed";
+      exit 0;
+    }
+    sh /tmp/get-docker.sh || {
+      echo "Warning: Docker install failed";
+      exit 0;
+    }
+    rm -f /tmp/get-docker.sh 2>/dev/null || true
+
+    systemctl enable --now docker.service docker.socket || true
+    docker --version || true
+
+  # Load and persist firewall rules
+  - 'netfilter-persistent reload || echo "Warning: netfilter-persistent reload failed"'
+  - 'systemctl enable netfilter-persistent || true'
+  - 'echo "Firewall rules loaded and persisted"'
+
+  # Cleanup
+  - 'apt-get clean || true'
+  - 'rm -rf /var/cache/apt/archives/* /var/lib/apt/lists/* 2>/dev/null || true'
+
+  # Status
+  - 'echo "### Bootstrap Summary"'
+  - 'echo "Hostname: $(hostname)"'
+  - 'echo "Sessions: $(who)"'
+  - 'echo "Docker status: $(systemctl is-active docker || echo inactive)"'
+  - 'echo "Fail2ban status: $(systemctl is-active fail2ban || echo inactive)"'
+  - 'echo "Firewall status: $(systemctl is-active netfilter-persistent || echo inactive)"'
+  - 'echo "End time: $(date)"'
+  - 'echo "### Cloud-init completed successfully. System is ready!"'
+
+# Track completion with detailed message
+final_message: "AIDome Demo VM setup completed at $TIMESTAMP after $UPTIME seconds"
+
+# Reboot the VM after cloud-init completes
+power_state:
+  delay: 1              # Reboot 1 minute after cloud-init completes
+  mode: reboot
+  message: "Rebooting to complete AIDome Demo VM setup..."
+  timeout: 30           # Wait up to 30 seconds for cloud-init to finish
+  condition: true       # Always reboot
