@@ -162,7 +162,10 @@ resource "aws_instance" "aidome" {
   vpc_security_group_ids = [aws_security_group.aidome.id]
   iam_instance_profile   = aws_iam_instance_profile.aidome.name
 
-  user_data                   = file("${path.module}/cloud-init.yaml")
+  user_data = templatefile("${path.module}/cloud-init.yaml", {
+    has_data_volume = var.data_volume_size > 0
+    data_device     = "/dev/xvdf"
+  })
   user_data_replace_on_change = true
 
   root_block_device {
@@ -203,7 +206,7 @@ resource "aws_ebs_volume" "data" {
 resource "aws_volume_attachment" "data" {
   count = var.data_volume_size > 0 ? 1 : 0
 
-  device_name = "/dev/xvdf"
+  device_name = "/dev/xvdf" # Must match data_device in cloud-init.yaml
   volume_id   = aws_ebs_volume.data[0].id
   instance_id = aws_instance.aidome.id
 }

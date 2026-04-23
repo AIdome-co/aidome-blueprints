@@ -17,7 +17,11 @@ set -euo pipefail
 
 HOST="${1:?Usage: $0 <public-ip> [ssh-key-path]}"
 KEY="${2:-~/.ssh/id_rsa}"
-SSH_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=10"
+# NOTE: StrictHostKeyChecking=accept-new trusts the key on first connect but
+# rejects changes on subsequent connections, protecting against MITM attacks
+# after the initial handshake.  For production use, pre-populate known_hosts
+# with the instance's host key from the EC2 console output.
+SSH_OPTS="-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10"
 
 ssh_cmd() {
   ssh ${SSH_OPTS} -i "${KEY}" "ubuntu@${HOST}" "$@"

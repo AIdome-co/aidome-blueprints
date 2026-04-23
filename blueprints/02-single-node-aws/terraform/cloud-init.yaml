@@ -4,6 +4,12 @@
 #
 # This cloud-config handles OS-level preparation so the machine is ready for
 # AIdome product installation.  It does NOT install the product itself.
+#
+# NOTE: This file is rendered via Terraform templatefile().  Conditional
+#       sections are included based on Terraform variables.
+#
+# Device path coupling: the data volume device "${data_device}" must match
+# the device_name in the aws_volume_attachment resource in main.tf.
 # ---------------------------------------------------------------------------
 
 # ── System packages ────────────────────────────────────────────────────────
@@ -33,11 +39,12 @@ users:
     shell: /bin/bash
     sudo: ["ALL=(ALL) NOPASSWD:ALL"]
     lock_passwd: true
+%{ if has_data_volume ~}
 
-# ── Disk setup (data volume at /dev/xvdf → /data) ─────────────────────────
+# ── Disk setup (data volume at ${data_device} → /data) ────────────────────
 
 disk_setup:
-  /dev/xvdf:
+  ${data_device}:
     table_type: gpt
     layout: true
     overwrite: false
@@ -45,12 +52,13 @@ disk_setup:
 fs_setup:
   - label: aidome-data
     filesystem: ext4
-    device: /dev/xvdf
+    device: ${data_device}
     partition: auto
     overwrite: false
 
 mounts:
-  - ["/dev/xvdf", "/data", "ext4", "defaults,nofail", "0", "2"]
+  - ["${data_device}", "/data", "ext4", "defaults,nofail", "0", "2"]
+%{ endif ~}
 
 # ── Write configuration files ─────────────────────────────────────────────
 
@@ -103,8 +111,8 @@ runcmd:
   - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
   - chmod a+r /etc/apt/keyrings/docker.gpg
   - |
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
-    https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+    echo "deb [arch=$$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+    https://download.docker.com/linux/ubuntu $$(lsb_release -cs) stable" \
     > /etc/apt/sources.list.d/docker.list
   - apt-get update -y
   - apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
@@ -112,10 +120,12 @@ runcmd:
   # Enable & start Docker
   - systemctl enable docker
   - systemctl start docker
+%{ if has_data_volume ~}
 
   # Prepare data directory structure
   - mkdir -p /data/aidome
   - chown -R aidome:aidome /data/aidome
+%{ endif ~}
 
   # Enable fail2ban
   - systemctl enable fail2ban
@@ -126,4 +136,4 @@ runcmd:
 
 # ── Final message ─────────────────────────────────────────────────────────
 
-final_message: "AIdome EC2 preparation finished in $UPTIME seconds."
+final_message: "AIdome EC2 preparation finished in $$UPTIME seconds."
