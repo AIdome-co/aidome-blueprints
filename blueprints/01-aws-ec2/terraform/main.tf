@@ -44,7 +44,7 @@ locals {
   # first boot — the user-data payload is only ~100 bytes.
   # Pin github_ref to a release tag or commit SHA in production to prevent
   # unexpected changes at the next instance launch.
-  github_cloud_init_url = "https://raw.githubusercontent.com/AIdome-co/aidome-blueprints/${var.github_ref}/blueprints/01-aws-ec2/scripts/cloud-init-${local.os_family}.yaml"
+  github_cloud_init_url  = "https://raw.githubusercontent.com/AIdome-co/aidome-blueprints/${var.github_ref}/blueprints/01-aws-ec2/scripts/cloud-init-${local.os_family}.yaml"
   github_include_payload = "#include\n${local.github_cloud_init_url}\n"
 
   # ── Effective user-data (base64-encoded) ───────────────────────────────────
