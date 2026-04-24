@@ -6,9 +6,81 @@
 # Required variables (no defaults — must be provided):
 vpc_id            = "vpc-xxxxxxxx"
 private_subnet_id = "subnet-xxxxxxxx"
-ami_id            = "ami-xxxxxxxx" # Ubuntu 24.04 LTS (Noble); find via: aws ec2 describe-images \
-                                   #   --filters 'Name=name,Values=ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*' \
-                                   #             'Name=owner-alias,Values=aws-marketplace' --query 'sort_by(Images,&CreationDate)[-1].ImageId'
+
+# Operating system selection — drives cloud-init template and AMI choice.
+# Supported values: ubuntu-2404 (recommended), ubuntu-2204, debian-12,
+#                   centos-9, rhel-9, rhel-10, almalinux-9, oracle-9, rocky-9
+os_type = "ubuntu-2404"
+
+# AMI ID — must match the selected os_type.
+# Find the latest AMI for each OS using the lookup commands below.
+#
+# Ubuntu 24.04 LTS (Noble) — recommended
+#   aws ec2 describe-images \
+#     --owners 099720109477 \
+#     --filters 'Name=name,Values=ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*' \
+#               'Name=state,Values=available' \
+#     --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+#
+# Ubuntu 22.04 LTS (Jammy)
+#   aws ec2 describe-images \
+#     --owners 099720109477 \
+#     --filters 'Name=name,Values=ubuntu/images/hvm-ssd-gp3/ubuntu-jammy-22.04-amd64-server-*' \
+#               'Name=state,Values=available' \
+#     --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+#
+# Debian 12 (Bookworm)
+#   aws ec2 describe-images \
+#     --owners 136693071363 \
+#     --filters 'Name=name,Values=debian-12-amd64-*' \
+#               'Name=state,Values=available' \
+#     --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+#
+# CentOS Stream 9
+#   aws ec2 describe-images \
+#     --owners 125523088429 \
+#     --filters 'Name=name,Values=CentOS Stream 9*' \
+#               'Name=state,Values=available' \
+#     --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+#
+# RHEL 9 (Red Hat official)
+#   aws ec2 describe-images \
+#     --owners 309956199498 \
+#     --filters 'Name=name,Values=RHEL-9*GA*' \
+#               'Name=architecture,Values=x86_64' \
+#               'Name=state,Values=available' \
+#     --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+#
+# RHEL 10 (Red Hat official)
+#   aws ec2 describe-images \
+#     --owners 309956199498 \
+#     --filters 'Name=name,Values=RHEL-10*GA*' \
+#               'Name=architecture,Values=x86_64' \
+#               'Name=state,Values=available' \
+#     --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+#
+# AlmaLinux 9
+#   aws ec2 describe-images \
+#     --owners 764336703387 \
+#     --filters 'Name=name,Values=AlmaLinux OS 9*' \
+#               'Name=state,Values=available' \
+#     --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+#
+# Oracle Linux 9
+#   aws ec2 describe-images \
+#     --owners 131827586825 \
+#     --filters 'Name=name,Values=OL9*' \
+#               'Name=state,Values=available' \
+#     --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+#
+# Rocky Linux 9
+#   aws ec2 describe-images \
+#     --owners 792107900699 \
+#     --filters 'Name=name,Values=Rocky-9-*' \
+#               'Name=state,Values=available' \
+#     --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+#
+ami_id = "ami-xxxxxxxx"
 
 # Recommended: attach an IAM instance profile so SSM Session Manager works
 # (no bastion host or open SSH port needed — IAM-controlled + CloudTrail-logged)

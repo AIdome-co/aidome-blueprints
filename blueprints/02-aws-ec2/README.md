@@ -20,7 +20,7 @@
   │   │                                             │  │
   │   │   ┌───────────────────────────────────┐    │  │
   │   │   │          EC2 Instance             │    │  │
-  │   │   │  (Ubuntu 24.04 LTS, no public IP) │    │  │
+  │   │   │  (multi-OS; Ubuntu 24.04 LTS recommended, no public IP) │    │  │
   │   │   │                                   │    │  │
   │   │   │  cloud-init on first boot:        │    │  │
   │   │   │  ├─ SSH hardening (port 22)       │    │  │
@@ -86,8 +86,105 @@
 - Existing VPC with a **private subnet**
   - **NAT Gateway** for outbound HTTPS (apt, Docker Hub, SSM) — _or_ —
   - **VPC Interface Endpoints** (`com.amazonaws.<region>.ssm`, `com.amazonaws.<region>.ssmmessages`, `com.amazonaws.<region>.ec2messages`) for a fully private deployment without a NAT Gateway
-- Ubuntu 24.04 LTS AMI (`ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*`)
+- AMI matching the selected `os_type` (see [Supported operating systems](#supported-operating-systems) below for lookup commands)
 - **IAM instance profile** with `AmazonSSMManagedInstanceCore` policy — **required for SSM Session Manager access** (strongly recommended over SSH for private-subnet instances; without it, SSM will not work)
+
+---
+
+## Supported operating systems
+
+Set `os_type` (Terraform) or `OsType` (CloudFormation) to select the target OS.
+The correct cloud-init script and root block device name are derived automatically.
+
+> **Vendor recommendation:** Ubuntu 24.04 LTS. All other OS types are community-supported.
+
+| `os_type` value | Distribution | Cloud-init script | Root device |
+|---|---|---|---|
+| `ubuntu-2404` ✅ | Ubuntu 24.04 LTS (Noble) | `cloud-init-deb.yaml` | `/dev/sda1` |
+| `ubuntu-2204` | Ubuntu 22.04 LTS (Jammy) | `cloud-init-deb.yaml` | `/dev/sda1` |
+| `debian-12` | Debian 12 (Bookworm) | `cloud-init-deb.yaml` | `/dev/xvda` |
+| `centos-9` | CentOS Stream 9 | `cloud-init-rhel.yaml` | `/dev/sda1` |
+| `rhel-9` | Red Hat Enterprise Linux 9 | `cloud-init-rhel.yaml` | `/dev/sda1` |
+| `rhel-10` | Red Hat Enterprise Linux 10 | `cloud-init-rhel.yaml` | `/dev/sda1` |
+| `almalinux-9` | AlmaLinux 9 (RHEL-compatible) | `cloud-init-rhel.yaml` | `/dev/sda1` |
+| `oracle-9` | Oracle Linux 9 (RHEL-compatible) | `cloud-init-rhel.yaml` | `/dev/sda1` |
+| `rocky-9` | Rocky Linux 9 (RHEL-compatible) | `cloud-init-rhel.yaml` | `/dev/sda1` |
+
+### AMI lookup commands
+
+Run these in your target region (`--region <region>`) to find the latest AMI for each OS.
+Always use the AMI ID exactly as returned — never use the name pattern as the AMI ID.
+
+```bash
+# Ubuntu 24.04 LTS (Noble) — recommended; owner: Canonical
+aws ec2 describe-images --owners 099720109477 \
+  --filters 'Name=name,Values=ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*' \
+            'Name=state,Values=available' \
+  --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+
+# Ubuntu 22.04 LTS (Jammy) — owner: Canonical
+aws ec2 describe-images --owners 099720109477 \
+  --filters 'Name=name,Values=ubuntu/images/hvm-ssd-gp3/ubuntu-jammy-22.04-amd64-server-*' \
+            'Name=state,Values=available' \
+  --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+
+# Debian 12 (Bookworm) — owner: Debian official
+aws ec2 describe-images --owners 136693071363 \
+  --filters 'Name=name,Values=debian-12-amd64-*' \
+            'Name=state,Values=available' \
+  --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+
+# CentOS Stream 9 — owner: CentOS official
+aws ec2 describe-images --owners 125523088429 \
+  --filters 'Name=name,Values=CentOS Stream 9*' \
+            'Name=state,Values=available' \
+  --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+
+# RHEL 9 — owner: Red Hat (309956199498)
+aws ec2 describe-images --owners 309956199498 \
+  --filters 'Name=name,Values=RHEL-9*GA*' \
+            'Name=architecture,Values=x86_64' \
+            'Name=state,Values=available' \
+  --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+
+# RHEL 10 — owner: Red Hat (309956199498)
+aws ec2 describe-images --owners 309956199498 \
+  --filters 'Name=name,Values=RHEL-10*GA*' \
+            'Name=architecture,Values=x86_64' \
+            'Name=state,Values=available' \
+  --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+
+# AlmaLinux 9 — owner: AlmaLinux OS Foundation (764336703387)
+aws ec2 describe-images --owners 764336703387 \
+  --filters 'Name=name,Values=AlmaLinux OS 9*' \
+            'Name=state,Values=available' \
+  --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+
+# Oracle Linux 9 — owner: Oracle (131827586825)
+aws ec2 describe-images --owners 131827586825 \
+  --filters 'Name=name,Values=OL9*' \
+            'Name=state,Values=available' \
+  --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+
+# Rocky Linux 9 — owner: Rocky Linux (792107900699)
+aws ec2 describe-images --owners 792107900699 \
+  --filters 'Name=name,Values=Rocky-9-*' \
+            'Name=state,Values=available' \
+  --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+```
+
+### OS family differences
+
+| Feature | Debian family (`cloud-init-deb.yaml`) | RHEL family (`cloud-init-rhel.yaml`) |
+|---|---|---|
+| Package manager | APT | DNF |
+| Docker repo | `download.docker.com/linux/{ubuntu\|debian}` | `download.docker.com/linux/{rhel\|centos}` |
+| Firewall persistence | `netfilter-persistent` / `iptables-persistent` | `iptables-services`; `firewalld` disabled |
+| Auto-updates | `unattended-upgrades` | `dnf-automatic` (security only) |
+| SSM Agent | snap (Ubuntu) / apt (Debian) fallback | DNF / RPM from S3 |
+| CloudWatch Agent | `.deb` package | `.rpm` package |
+| Sudo group | `sudo` | `wheel` |
+| Syslog path | `/var/log/syslog`, `/var/log/auth.log` | `/var/log/messages`, `/var/log/secure` |
 
 ---
 
@@ -101,7 +198,8 @@ module "aidome_ec2" {
 
   vpc_id            = "vpc-xxxxxxxx"
   private_subnet_id = "subnet-xxxxxxxx"
-  ami_id            = "ami-xxxxxxxx"  # Ubuntu 24.04 LTS (Noble)
+  os_type           = "ubuntu-2404"  # vendor recommended; see README for all supported OS types
+  ami_id            = "ami-xxxxxxxx"  # Ubuntu 24.04 LTS (Noble) — must match os_type
 
   # Recommended: attach an IAM profile with AmazonSSMManagedInstanceCore
   # (add CloudWatchAgentServerPolicy to the same role to enable metrics/log shipping)
@@ -137,12 +235,15 @@ aws cloudformation deploy \
   --parameter-overrides \
       VpcId=vpc-xxxxxxxx \
       PrivateSubnetId=subnet-xxxxxxxx \
+      OsType=ubuntu-2404 \
       AmiId=ami-xxxxxxxx \
       IamInstanceProfileName=aidome-ssm-profile \
   --capabilities CAPABILITY_NAMED_IAM
 ```
 
 Pass cloud-init content via the `CloudInitUserData` parameter (base64-encoded by the template).
+Use `scripts/cloud-init-deb.yaml` for Debian-family OS types (`ubuntu-*`, `debian-12`) and
+`scripts/cloud-init-rhel.yaml` for RHEL-family types (`centos-9`, `rhel-*`, `almalinux-9`, `oracle-9`, `rocky-9`).
 
 ---
 
