@@ -35,6 +35,18 @@ This file tracks the remaining gaps from the post-merge audit of PR #2 against t
 - [x] **Heatmap expanded** — added columns for iptables Firewall, SSM Agent, CloudWatch Agent, Auto-updates, Package Cleanup.
 - [x] **netfilter-persistent reload regression fixed** — `netfilter-persistent reload` re-added to `cloud-init-deb.yaml` runcmd so firewall rules are active immediately (not only after reboot).
 
+## Done in user-data limit PR (this PR)
+
+- [x] **EC2 user-data 16 KB limit bypass**: both `cloud-init-deb.yaml` (22.8 KB raw) and `cloud-init-rhel.yaml` (25.1 KB raw) exceeded the 16 KB limit; silently broke provisioning.
+- [x] **Terraform `cloud_init_delivery` variable** (`"github"` default / `"local"`): `github` mode embeds a ~100-byte `#include` directive that fetches the full YAML from GitHub at first boot; `local` mode uses `base64gzip()` which compresses both scripts to < 8 KB (well within limit).
+- [x] **Terraform `github_ref` variable** (default `"main"`): allows pinning to a release tag or commit SHA for reproducible production deployments.
+- [x] **`user_data` → `user_data_base64`** on `aws_instance`: required when using `base64gzip()` for the `local` path.
+- [x] **Terraform `precondition` updated**: only fires for `local` mode (github mode has no local file dependency).
+- [x] **CloudFormation `GitRef` parameter** (default `"main"`): mirrors Terraform `github_ref` for pinning.
+- [x] **CloudFormation `OsFamily` mapping**: auto-derives `cloud-init-deb.yaml` vs `cloud-init-rhel.yaml` from `OsType` parameter.
+- [x] **CloudFormation `UserData` default**: now generates `#include <github-raw-url>` via `Fn::Sub` + `FindInMap`; `CloudInitUserData` parameter still overrides for air-gapped.
+- [x] **README updated**: delivery modes table, 16 KB context, pinning guidance for both Terraform and CloudFormation.
+
 ## Remaining follow-up items
 
 ### High priority
@@ -49,6 +61,9 @@ This file tracks the remaining gaps from the post-merge audit of PR #2 against t
 - [x] **Docker GPG keyring path**: current code uses `/etc/apt/keyrings/docker.gpg`, which is the path shown in current Docker official documentation for Ubuntu. No change needed.
 - [x] **IAM instance profile optionality**: Pre-requisites section in README now explicitly marks the IAM profile as **required for SSM access** and explains the consequence of omitting it.
 - [x] **VPC endpoint guidance**: README now documents the three required VPC Interface Endpoints (`ssm`, `ssmmessages`, `ec2messages`) for private-subnet deployments without a NAT Gateway.
+- [ ] **`github_ref` security default**: `"main"` is a mutable ref — any push to `main` changes what boots on the next instance launch. Consider changing the default to a pinned tag when the first release is cut, or add a `validation` block that warns when `"main"` is used with a non-dev environment tag.
+- [ ] **`#include` integrity check**: the `github` delivery mode fetches over HTTPS (transport-secure) but does not verify the SHA256 of the downloaded YAML. For higher-assurance deployments, a wrapper `runcmd` could re-download and verify a checksum before cloud-init processes the file — left for follow-up.
+- [ ] **CloudFormation has no `local`/gzip equivalent**: the CFN template cannot dynamically gzip a large file at stack-deploy time (unlike Terraform's `base64gzip()`). The `CloudInitUserData` override parameter accepts only raw (un-gzipped) content. Air-gapped CFN users must pre-gzip+base64 the payload themselves or supply the content via a different mechanism. This asymmetry should be documented.
 - [ ] **Host iptables vs allowed_ssh_cidr mismatch**: host iptables accepts SSH from any source; the AWS Security Group is CIDR-aware. Closing the gap requires cloud-init templating (passing `allowed_ssh_cidr` into cloud-init via `templatefile()`) — left for a follow-up to avoid making cloud-init provider-specific.
 - [ ] **CloudFormation cloud-init delivery**: `CloudInitUserData` is provided as a raw parameter and base64-encoded by `Fn::Base64` in the template (no manual encoding needed by the customer). However, `CreationPolicy`/`cfn-signal` bootstrap readiness signaling is still absent — left for follow-up since the cloud-init content is customer-supplied, making cfn-signal injection non-trivial.
 
@@ -80,6 +95,9 @@ This file tracks the remaining gaps from the post-merge audit of PR #2 against t
 | ~~🟠 Medium~~ | ~~`netfilter-persistent reload` missing from `cloud-init-deb.yaml`~~ ✅ Fixed |
 | ~~🟢 Low~~ | ~~Heatmap CLI Tools column showed 🟡 (partial) — now 🟢 (all installed)~~ ✅ Fixed |
 | ~~🟢 Low~~ | ~~Heatmap missing columns (iptables, SSM, CW Agent, Auto-updates)~~ ✅ Fixed |
+| 🟠 Medium | `github_ref` defaults to `"main"` — mutable supply-chain risk; should default to a pinned tag at first release |
+| 🟠 Medium | `#include` integrity check — no SHA256 verification of downloaded cloud-init YAML |
+| 🟠 Medium | CloudFormation has no `local`/gzip equivalent for air-gapped deployments (CFN parameter limit) |
 | 🟠 Medium | Host iptables SSH rule too broad vs `allowed_ssh_cidr` (requires cloud-init templating) |
 | 🟠 Medium | CloudFormation bootstrap readiness (`CreationPolicy`/`cfn-signal`) |
 | ~~🟢 Low~~ | ~~terraform.tfvars.example~~ ✅ Created |
