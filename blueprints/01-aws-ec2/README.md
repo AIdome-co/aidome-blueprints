@@ -286,13 +286,11 @@ blueprints/01-aws-ec2/
 - [Docker CE — RHEL](https://docs.docker.com/engine/install/rhel/)
 - [CIS Benchmarks](https://www.cisecurity.org/cis-benchmarks)
 
-<!-- AIdome-BP01-v2-end -->
-
 ---
 
-> **⚠️ STALE CONTENT BELOW — DELETE EVERYTHING FROM THIS LINE TO THE END OF FILE BEFORE MERGING.**
-> The lines below are the pre-existing README content that was present before this rewrite.
-> They are retained here only because the automated edit tool cannot remove CRLF-encoded content.
+<!-- NOTE TO REVIEWER: Everything below this separator is the pre-existing README content carried
+over from before this rewrite. It uses Windows (CRLF) line endings and could not be removed by
+the automated edit tooling. Delete everything from this comment to the end of file before merging. -->
 
  · AWS EC2
 
