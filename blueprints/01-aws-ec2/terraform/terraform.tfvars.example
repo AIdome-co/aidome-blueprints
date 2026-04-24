@@ -107,12 +107,13 @@ tags = {
 }
 
 # cloud-init delivery mode
-# "github" (default) — instance fetches the cloud-init YAML from the public GitHub repository
-#   at first boot using cloud-init's #include directive. No local file is embedded in user data,
-#   so the 16 KB EC2 limit is not a concern.
-# "local" — the cloud-init YAML is read from disk, gzip-compressed, and embedded in user data.
-#   Use for air-gapped environments or when supplying a custom cloud_init_template_path.
-# cloud_init_delivery = "github"
+# "local" (default) — the cloud-init YAML is read from disk, gzip-compressed, and embedded in
+#   user data. Both scripts compress to < 8 KB — well under the 16 KB EC2 limit — with no
+#   runtime dependency on GitHub reachability. Recommended for all deployments.
+# "github" — instance fetches the cloud-init YAML from the public GitHub repository at first boot
+#   using cloud-init's #include directive. Requires outbound HTTPS to raw.githubusercontent.com
+#   (NAT gateway or VPC endpoint required). Pin github_ref to a tag or SHA in production.
+# cloud_init_delivery = "local"
 
 # Git ref used when cloud_init_delivery = "github".
 # Pin to a release tag or commit SHA in production for reproducible deployments:

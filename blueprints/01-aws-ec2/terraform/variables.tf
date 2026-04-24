@@ -92,17 +92,19 @@ variable "cloud_init_delivery" {
   description = <<-EOT
     Controls how the cloud-init configuration is delivered to the EC2 instance.
 
-    "github" (default) — The instance downloads the cloud-init YAML at first boot using
-    cloud-init's native #include directive. The file is fetched from the public GitHub
-    repository at the ref specified by `github_ref`. This keeps user data well under the
-    16 KB EC2 limit and ensures the script is always sourced from version control.
+    "local" (default) — The cloud-init YAML is read from disk at plan/apply time,
+    gzip-compressed, and base64-encoded before being embedded in user data. Both scripts
+    compress to < 8 KB — well under the 16 KB EC2 limit — with zero runtime dependencies.
+    Use this for air-gapped deployments or when a custom `cloud_init_template_path` is
+    required.
 
-    "local" — The cloud-init YAML is read from disk at plan/apply time, gzip-compressed,
-    and base64-encoded before being embedded in user data. Use this for air-gapped
-    deployments or when a custom `cloud_init_template_path` is required.
+    "github" — The instance downloads the cloud-init YAML at first boot using
+    cloud-init's native #include directive. The file is fetched from the public GitHub
+    repository at the ref specified by `github_ref`. Requires outbound HTTPS to
+    raw.githubusercontent.com at boot time (NAT gateway or VPC endpoint required).
   EOT
   type        = string
-  default     = "github"
+  default     = "local"
 
   validation {
     condition     = contains(["github", "local"], var.cloud_init_delivery)
