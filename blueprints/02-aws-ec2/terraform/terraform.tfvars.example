@@ -1,0 +1,29 @@
+# terraform.tfvars.example
+#
+# Copy this file to terraform.tfvars and fill in your values.
+# Never commit terraform.tfvars to version control — it may contain sensitive data.
+#
+# Required variables (no defaults — must be provided):
+vpc_id            = "vpc-xxxxxxxx"
+private_subnet_id = "subnet-xxxxxxxx"
+ami_id            = "ami-xxxxxxxx" # Ubuntu 22.04 LTS; find via: aws ec2 describe-images ...
+
+# Recommended: attach an IAM instance profile so SSM Session Manager works
+# (no bastion host or open SSH port needed — IAM-controlled + CloudTrail-logged)
+iam_instance_profile_name = "aidome-ssm-profile" # must have AmazonSSMManagedInstanceCore
+
+# Optional: allow SSH from a narrow internal CIDR (SSM is preferred)
+# allowed_ssh_cidr = "10.0.0.0/8"
+# key_name         = "my-key-pair"
+
+# Instance sizing — t3.small is the minimum for AIDome
+instance_type    = "t3.small"
+root_volume_size = 30 # GiB — increase if large model artefacts will be stored locally
+
+# Resource name prefix and tags
+name_prefix = "aidome-ec2"
+tags = {
+  Environment = "dev"
+  Project     = "aidome"
+  ManagedBy   = "terraform"
+}

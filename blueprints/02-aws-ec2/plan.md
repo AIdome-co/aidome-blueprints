@@ -31,15 +31,16 @@ This file tracks the remaining gaps from the post-merge audit of PR #2 against t
 
 ### Medium priority
 
-- [ ] **Host iptables vs allowed_ssh_cidr mismatch**: the AWS Security Group is CIDR-aware but iptables accepts SSH from any source (`-A INPUT -p tcp --dport 22 -j ACCEPT`). For defense-in-depth these should match.
-- [ ] **CloudFormation cloud-init delivery**: `CloudInitUserData` is a raw string parameter with `NoEcho: true`. Customer must manually base64-encode or paste the full cloud-init YAML. No `cfn-init`/`cfn-signal`/`CreationPolicy` is used, so CloudFormation cannot confirm bootstrap success.
-- [ ] **IAM instance profile optionality**: SSM Session Manager is recommended for private-subnet access, but the IAM instance profile is optional in both TF and CFN. Consider making it required or adding a validation warning.
-- [ ] **Missing CIS sysctl parameters**: `net.ipv4.conf.all.log_martians = 1`, `net.ipv4.conf.default.log_martians = 1`, `net.ipv6.conf.all.accept_ra = 0`, `net.ipv6.conf.default.accept_ra = 0` (CIS 3.3.6-3.3.10).
-- [ ] **Docker GPG keyring path**: code uses `/etc/apt/keyrings/docker.gpg`; Docker official docs now recommend `/usr/share/keyrings/docker-archive-keyring.gpg`. Both work, but the latter is the canonical path.
+- [x] **Missing CIS sysctl parameters**: added `net.ipv4.conf.all.log_martians = 1`, `net.ipv4.conf.default.log_martians = 1`, `net.ipv6.conf.all.accept_ra = 0`, `net.ipv6.conf.default.accept_ra = 0` (CIS 3.3.6–3.3.10).
+- [x] **Docker GPG keyring path**: current code uses `/etc/apt/keyrings/docker.gpg`, which is the path shown in current Docker official documentation for Ubuntu. No change needed.
+- [x] **IAM instance profile optionality**: Pre-requisites section in README now explicitly marks the IAM profile as **required for SSM access** and explains the consequence of omitting it.
+- [x] **VPC endpoint guidance**: README now documents the three required VPC Interface Endpoints (`ssm`, `ssmmessages`, `ec2messages`) for private-subnet deployments without a NAT Gateway.
+- [ ] **Host iptables vs allowed_ssh_cidr mismatch**: host iptables accepts SSH from any source; the AWS Security Group is CIDR-aware. Closing the gap requires cloud-init templating (passing `allowed_ssh_cidr` into cloud-init via `templatefile()`) — left for a follow-up to avoid making cloud-init provider-specific.
+- [ ] **CloudFormation cloud-init delivery**: `CloudInitUserData` is provided as a raw parameter and base64-encoded by `Fn::Base64` in the template (no manual encoding needed by the customer). However, `CreationPolicy`/`cfn-signal` bootstrap readiness signaling is still absent — left for follow-up since the cloud-init content is customer-supplied, making cfn-signal injection non-trivial.
 
 ### Low priority
 
-- [ ] Add `terraform.tfvars.example` for customer convenience.
+- [x] Add `terraform.tfvars.example` — created at `terraform/terraform.tfvars.example`.
 - [ ] Add optional CloudWatch Agent / log-shipping guidance.
 - [ ] Add optional customer-managed KMS key support for EBS encryption.
 - [ ] Consider tighter default egress rules with commented examples.
@@ -52,9 +53,11 @@ This file tracks the remaining gaps from the post-merge audit of PR #2 against t
 | ~~🔴 High~~ | ~~Operator-access flow consistency (`ubuntu` vs `aidome-ops` vs SSM)~~ ✅ Fixed |
 | ~~🔴 High~~ | ~~SSH `Banner /etc/issue.net` directive missing (CIS 5.2.18)~~ ✅ Fixed |
 | ~~🔴 High~~ | ~~Docker + iptables / DOCKER-USER chain not handled~~ ✅ Fixed |
-| 🟠 Medium | Host iptables SSH rule too broad vs `allowed_ssh_cidr` |
-| 🟠 Medium | CloudFormation cloud-init delivery UX (no cfn-signal) |
-| 🟠 Medium | IAM instance profile should be required or warned |
-| 🟠 Medium | 4 missing CIS sysctl parameters |
-| 🟠 Medium | Docker GPG keyring non-canonical path |
-| 🟢 Low | terraform.tfvars.example, CloudWatch, KMS, egress, backend |
+| ~~🟠 Medium~~ | ~~4 missing CIS sysctl parameters~~ ✅ Fixed |
+| ~~🟠 Medium~~ | ~~Docker GPG keyring path~~ ✅ Already aligned with current Docker docs |
+| ~~🟠 Medium~~ | ~~IAM instance profile should be required or warned~~ ✅ README updated |
+| ~~🟠 Medium~~ | ~~VPC endpoint guidance missing~~ ✅ README updated |
+| 🟠 Medium | Host iptables SSH rule too broad vs `allowed_ssh_cidr` (requires cloud-init templating) |
+| 🟠 Medium | CloudFormation bootstrap readiness (`CreationPolicy`/`cfn-signal`) |
+| ~~🟢 Low~~ | ~~terraform.tfvars.example~~ ✅ Created |
+| 🟢 Low | CloudWatch, KMS, egress tightening, remote backend guidance |

@@ -82,9 +82,11 @@
 
 ## Pre-requisites
 
-- Existing VPC with a **private subnet** (with NAT Gateway or VPC Endpoints for outbound HTTPS)
+- Existing VPC with a **private subnet**
+  - **NAT Gateway** for outbound HTTPS (apt, Docker Hub, SSM) — _or_ —
+  - **VPC Interface Endpoints** (`com.amazonaws.<region>.ssm`, `com.amazonaws.<region>.ssmmessages`, `com.amazonaws.<region>.ec2messages`) for a fully private deployment without a NAT Gateway
 - Ubuntu 22.04 LTS AMI (`ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*`)
-- IAM instance profile with `AmazonSSMManagedInstanceCore` policy (for SSM access)
+- **IAM instance profile** with `AmazonSSMManagedInstanceCore` policy — **required for SSM Session Manager access** (strongly recommended over SSH for private-subnet instances; without it, SSM will not work)
 
 ---
 
@@ -158,5 +160,7 @@ curl -fsSL https://your-bucket/aidome.sh | sudo bash
 
 - **SSM Session Manager is preferred** over SSH for private-subnet access. No bastion host or open inbound ports needed; access is IAM-controlled and logged to CloudTrail.
 - Restrict `allowed_ssh_cidr` / `AllowedSshCidr` to the narrowest practical range.
+- **VPC endpoints for SSM**: if the subnet has no NAT Gateway, create VPC Interface Endpoints for `ssm`, `ssmmessages`, and `ec2messages` to allow the SSM Agent to reach AWS APIs without internet access.
+- Host iptables accept SSH from any source by default (defense-in-depth; the primary perimeter is the AWS Security Group). For stricter hosts, tighten the `INPUT` SSH rule to match your `allowed_ssh_cidr` after provisioning.
 - Review and tighten egress rules before production use.
 - To enable IP forwarding for future VPN use, uncomment the `ip_forward` lines in `scripts/cloud-init.yaml` under `/etc/sysctl.d/99-aidome-security.conf`.

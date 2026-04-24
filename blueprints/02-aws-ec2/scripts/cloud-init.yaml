@@ -156,11 +156,18 @@ write_files:
       net.ipv4.icmp_echo_ignore_broadcasts = 1
       net.ipv4.icmp_ignore_bogus_error_responses = 1
 
+      # Log martian packets (CIS 3.3.7)
+      net.ipv4.conf.all.log_martians = 1
+      net.ipv4.conf.default.log_martians = 1
+
       # IPv6 security
       net.ipv6.conf.all.accept_redirects = 0
       net.ipv6.conf.default.accept_redirects = 0
       net.ipv6.conf.all.accept_source_route = 0
       net.ipv6.conf.default.accept_source_route = 0
+      # Disable IPv6 router advertisements (CIS 3.3.10)
+      net.ipv6.conf.all.accept_ra = 0
+      net.ipv6.conf.default.accept_ra = 0
 
       # TCP hardening
       net.ipv4.tcp_syncookies = 1
