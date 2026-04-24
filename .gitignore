@@ -205,3 +205,68 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# ============================================================================
+# Infrastructure as Code
+# ============================================================================
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+crash.log
+crash.*.log
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+.terraform.tfstate.lock.info
+
+# Ansible
+*.retry
+.vault_pass
+vault-password*
+ansible.log
+
+# Kubernetes / Helm
+kubeconfig
+kubeconfig.*
+*.kubeconfig
+charts/*.tgz
+
+# CloudFormation
+packaged-*.yaml
+packaged-*.yml
+
+# Secrets / keys
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+.env
+.env.*
+!.env.example
+
+# ============================================================================
+# AI agent scratch files (planning-with-files skill)
+# ============================================================================
+/task_plan.md
+/findings.md
+/progress.md
+
+# ============================================================================
+# Editor / OS
+# ============================================================================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
