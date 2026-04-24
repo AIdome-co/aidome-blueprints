@@ -1,7 +1,15 @@
-# Blueprint 02 · AWS EC2
+# Blueprint 02 · AWS EC2 – Single Node
 
 > Customer-facing EC2 blueprint. Provisions a hardened, private-subnet EC2 instance
-> bootstrapped via cloud-init. Once up, the customer runs `aidome.sh` to install AIDome.
+> bootstrapped via cloud-init, with optional greenfield networking.
+> Once up, the AIdome team installs the product using `aidome.sh`.
+
+This blueprint works in two modes selected by a single Terraform variable:
+
+| Mode | Variable | When to use |
+|------|----------|-------------|
+| **Bring Your Own VPC** | `create_vpc = false` (default) | You already have an AWS VPC with a private subnet and NAT Gateway (or VPC endpoints) |
+| **Greenfield** | `create_vpc = true` | Starting fresh — Terraform creates the VPC, subnets, Internet Gateway, NAT Gateway, and route tables for you |
 
 ---
 
@@ -83,17 +91,26 @@
 
 ## Pre-requisites
 
+### Bring Your Own VPC (default: `create_vpc = false`)
+
 - Existing VPC with a **private subnet**
   - **NAT Gateway** for outbound HTTPS (apt, Docker Hub, SSM) — _or_ —
   - **VPC Interface Endpoints** (`com.amazonaws.<region>.ssm`, `com.amazonaws.<region>.ssmmessages`, `com.amazonaws.<region>.ec2messages`) for a fully private deployment without a NAT Gateway
 - Ubuntu 24.04 LTS AMI (`ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*`)
 - **IAM instance profile** with `AmazonSSMManagedInstanceCore` policy — **required for SSM Session Manager access** (strongly recommended over SSH for private-subnet instances; without it, SSM will not work)
 
+### Greenfield (`create_vpc = true`)
+
+- An AWS account and region — no pre-existing VPC required
+- Ubuntu 24.04 LTS AMI (same as above)
+- IAM instance profile (same as above)
+- Terraform will create the full network stack (VPC → subnets → IGW → NAT Gateway → route tables) and the EC2 instance in a single `apply`
+
 ---
 
 ## Usage
 
-### Terraform
+### Terraform — Bring Your Own VPC
 
 ```hcl
 module "aidome_ec2" {
@@ -124,7 +141,34 @@ module "aidome_ec2" {
 }
 ```
 
-A ready-to-edit [`terraform.tfvars.example`](terraform/terraform.tfvars.example) is provided alongside the module. See [`variables.tf`](terraform/variables.tf) for the full list of inputs and [`outputs.tf`](terraform/outputs.tf) for the exposed outputs (`instance_id`, `private_ip`, `security_group_id`).
+### Terraform — Greenfield (no existing VPC)
+
+```hcl
+module "aidome_ec2" {
+  source = "./blueprints/02-aws-ec2/terraform"
+
+  # Terraform creates VPC, subnets, IGW, NAT Gateway, and route tables
+  create_vpc = true
+
+  # Optional: override CIDR defaults and AZ (sensible defaults are pre-set)
+  # vpc_cidr            = "10.0.0.0/16"
+  # public_subnet_cidr  = "10.0.0.0/24"
+  # private_subnet_cidr = "10.0.1.0/24"
+  # availability_zone   = "us-east-1a"
+
+  ami_id                    = "ami-xxxxxxxx"  # Ubuntu 24.04 LTS (Noble)
+  iam_instance_profile_name = "aidome-ssm-profile"
+  instance_type             = "t3.small"
+  root_volume_size          = 30
+
+  tags = {
+    Environment = "dev"
+    Project     = "aidome"
+  }
+}
+```
+
+A ready-to-edit [`terraform.tfvars.example`](terraform/terraform.tfvars.example) is provided alongside the module. See [`variables.tf`](terraform/variables.tf) for the full list of inputs and [`outputs.tf`](terraform/outputs.tf) for the exposed outputs (`vpc_id`, `instance_id`, `private_ip`, `security_group_id`).
 
 ### CloudFormation
 

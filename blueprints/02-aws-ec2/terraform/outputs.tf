@@ -1,3 +1,8 @@
+output "vpc_id" {
+  description = "ID of the VPC (created or pre-existing) used by this blueprint"
+  value       = local.effective_vpc_id
+}
+
 output "instance_id" {
   description = "ID of the private VM instance"
   value       = aws_instance.vm_instance.id

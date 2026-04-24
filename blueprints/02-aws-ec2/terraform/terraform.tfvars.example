@@ -3,12 +3,22 @@
 # Copy this file to terraform.tfvars and fill in your values.
 # Never commit terraform.tfvars to version control — it may contain sensitive data.
 #
-# Required variables (no defaults — must be provided):
+# ──────────────────────────────────────────────────────────────────────────────
+# MODE A: Bring Your Own VPC (default)
+#
+# Use this when you already have an AWS VPC with a private subnet and NAT Gateway
+# (or VPC endpoints for SSM). Set create_vpc = false (the default) and supply:
+# ──────────────────────────────────────────────────────────────────────────────
+
+# create_vpc = false   # default — omit or set explicitly
+
 vpc_id            = "vpc-xxxxxxxx"
 private_subnet_id = "subnet-xxxxxxxx"
-ami_id            = "ami-xxxxxxxx" # Ubuntu 24.04 LTS (Noble); find via: aws ec2 describe-images \
-                                   #   --filters 'Name=name,Values=ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*' \
-                                   #             'Name=owner-alias,Values=aws-marketplace' --query 'sort_by(Images,&CreationDate)[-1].ImageId'
+ami_id            = "ami-xxxxxxxx" # Ubuntu 24.04 LTS (Noble); find via:
+                                   #   aws ec2 describe-images \
+                                   #     --filters 'Name=name,Values=ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*' \
+                                   #               'Name=owner-alias,Values=aws-marketplace' \
+                                   #     --query 'sort_by(Images,&CreationDate)[-1].ImageId'
 
 # Recommended: attach an IAM instance profile so SSM Session Manager works
 # (no bastion host or open SSH port needed — IAM-controlled + CloudTrail-logged)
@@ -33,3 +43,20 @@ tags = {
   Project     = "aidome"
   ManagedBy   = "terraform"
 }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# MODE B: Greenfield — Terraform creates the full networking stack
+#
+# Use this when you have no existing VPC. Set create_vpc = true and omit
+# vpc_id / private_subnet_id. Terraform will create:
+#   VPC, public subnet, private subnet, Internet Gateway, NAT Gateway,
+#   Elastic IP, and route tables — all in a single apply.
+# ──────────────────────────────────────────────────────────────────────────────
+
+# create_vpc = true
+#
+# vpc_cidr            = "10.0.0.0/16"   # default
+# public_subnet_cidr  = "10.0.0.0/24"  # default
+# private_subnet_cidr = "10.0.1.0/24"  # default
+# availability_zone   = "us-east-1a"   # optional; defaults to first available AZ
+

@@ -4,14 +4,46 @@ variable "name_prefix" {
   default     = "aidome-ec2"
 }
 
-variable "vpc_id" {
-  description = "VPC ID where resources are created"
+variable "create_vpc" {
+  description = "When true, Terraform creates a new VPC, subnets, NAT Gateway, and route tables (greenfield deployment). When false (default), vpc_id and private_subnet_id must be supplied."
+  type        = bool
+  default     = false
+}
+
+variable "vpc_cidr" {
+  description = "CIDR block for the new VPC (only used when create_vpc = true)"
   type        = string
+  default     = "10.0.0.0/16"
+}
+
+variable "public_subnet_cidr" {
+  description = "CIDR block for the public subnet used by the NAT Gateway (only used when create_vpc = true)"
+  type        = string
+  default     = "10.0.0.0/24"
+}
+
+variable "private_subnet_cidr" {
+  description = "CIDR block for the private subnet used by the EC2 instance (only used when create_vpc = true)"
+  type        = string
+  default     = "10.0.1.0/24"
+}
+
+variable "availability_zone" {
+  description = "Availability Zone for new subnets (only used when create_vpc = true; defaults to first available AZ in the region)"
+  type        = string
+  default     = null
+}
+
+variable "vpc_id" {
+  description = "ID of an existing VPC (required when create_vpc = false)"
+  type        = string
+  default     = null
 }
 
 variable "private_subnet_id" {
-  description = "Private subnet ID for the EC2 instance"
+  description = "ID of an existing private subnet (required when create_vpc = false)"
   type        = string
+  default     = null
 }
 
 variable "ami_id" {

@@ -14,10 +14,9 @@ If you are an AI assistant opening this repo, **read this file first**, then the
 | # | Blueprint | Tooling |
 |---|-----------|---------|
 | 01 | Quickstart – Local | Docker Compose |
-| 02 | AWS EC2 (customer onboarding) | Terraform, CloudFormation, cloud-init |
-| 03 | Single-Node – AWS | Terraform |
-| 04 | HA Kubernetes | Terraform + Helm |
-| 05 | Air-Gapped | Ansible |
+| 02 | AWS EC2 – Single Node (customer onboarding) | Terraform, CloudFormation, cloud-init |
+| 03 | HA Kubernetes | Terraform + Helm |
+| 04 | Air-Gapped | Ansible |
 
 See [`README.md`](README.md) for the blueprint matrix and [`docs/architecture-principles.md`](docs/architecture-principles.md) for shared design decisions.
 
@@ -41,11 +40,11 @@ aidome-blueprints/
 ├── blueprints/
 │   ├── 01-quickstart-local/          ← docker-compose.yml
 │   ├── 02-aws-ec2/                   ← terraform/, cloudformation/, scripts/
-│   ├── 03-single-node-aws/           ← terraform/
 │   ├── 04-ha-kubernetes/             ← terraform/, helm/
 │   └── 05-air-gapped/                ← ansible/
 ├── shared/
-│   ├── terraform-modules/            ← Reusable TF modules
+│   ├── terraform-modules/
+│   │   └── networking/               ← VPC, subnets, NAT GW (used by 02-aws-ec2 greenfield mode)
 │   └── scripts/                      ← Shared shell scripts
 ├── docs/                             ← Cross-cutting docs (MkDocs)
 ├── assets/diagrams/                  ← Architecture diagram sources
