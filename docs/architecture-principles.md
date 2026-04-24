@@ -24,6 +24,7 @@ Overlapping areas are split across two companion documents to avoid duplication:
 10. [Observability](#10-observability)
 11. [Rollback and Recovery](#11-rollback-and-recovery)
 12. [Decision Log](#12-decision-log)
+13. [References](#13-references)
 
 ---
 
@@ -82,7 +83,7 @@ Blueprint 01 is the only self-service blueprint with published documentation. Bl
 
 ### 4.1 Private-by-Default
 
-All compute resources are deployed into **private subnets** with no public IP address (`associate_public_ip_address = false`). Inbound traffic reaches nodes only through customer-managed NAT Gateways, VPC endpoints, or load balancers.
+All compute resources are deployed into **[private subnets](https://docs.aws.amazon.com/vpc/latest/userguide/configure-subnets.html)** with no public IP address (`associate_public_ip_address = false`). Inbound traffic reaches nodes only through customer-managed NAT Gateways, VPC endpoints, or load balancers.
 
 ### 4.2 Bring Your Own VPC (BYOV)
 
@@ -92,7 +93,7 @@ Blueprint 02 follows the same BYOV model for cluster subnets.
 
 ### 4.3 Security Groups Follow Least Privilege
 
-The Blueprint 01 security group:
+The Blueprint 01 [security group](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html):
 
 - Allows **all egress** (required for package installs, Docker Hub, AWS service endpoints).
 - Allows **SSH ingress on port 22** only when `var.allowed_ssh_cidr` is explicitly set; by default no inbound rules are created.
@@ -102,9 +103,9 @@ Never widen a security group to `0.0.0.0/0` on an inbound rule without explicit 
 
 ### 4.4 Host Firewall as a Second Layer
 
-Blueprint 01 configures `iptables` (Debian/Ubuntu) and `firewalld` (RHEL/AlmaLinux) in addition to the AWS security group, providing defence in depth.
+Blueprint 01 configures [`iptables`](https://www.netfilter.org/projects/iptables/index.html) (Debian/Ubuntu) and [`firewalld`](https://firewalld.org/) (RHEL/AlmaLinux) in addition to the AWS security group, providing defence in depth.
 
-On Debian-family nodes, the `DOCKER-USER` iptables chain restricts container egress to RFC 1918 private address ranges by default. Containers trying to reach public addresses are dropped unless the customer explicitly adds an exception:
+On Debian-family nodes, the [`DOCKER-USER` iptables chain](https://docs.docker.com/engine/network/packet-filtering-firewalls/#docker-on-a-router) restricts container egress to [RFC 1918](https://datatracker.ietf.org/doc/html/rfc1918) private address ranges by default. Containers trying to reach public addresses are dropped unless the customer explicitly adds an exception:
 
 ```bash
 # Allow a specific public IP through the DOCKER-USER chain
@@ -120,13 +121,13 @@ This prevents compromised containers from calling back to arbitrary internet end
 
 ### 5.1 IAM Roles, Not Access Keys
 
-Compute resources authenticate to AWS services using **IAM instance profiles**. Long-lived AWS access keys are never generated, stored, or used by any blueprint. The IAM instance profile name is supplied by the customer via `var.iam_instance_profile_name`; blueprints do not create the IAM role.
+Compute resources authenticate to AWS services using **[IAM instance profiles](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html)**. Long-lived AWS access keys are never generated, stored, or used by any blueprint. The IAM instance profile name is supplied by the customer via `var.iam_instance_profile_name`; blueprints do not create the IAM role.
 
-At minimum, the instance profile must grant `AmazonSSMManagedInstanceCore` so that SSM Session Manager can be used for keyless shell access. `CloudWatchAgentServerPolicy` is required for the CloudWatch Agent log shipping configured by cloud-init.
+At minimum, the instance profile must grant [`AmazonSSMManagedInstanceCore`](https://docs.aws.amazon.com/systems-manager/latest/userguide/setup-instance-permissions.html) so that [SSM Session Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager.html) can be used for keyless shell access. [`CloudWatchAgentServerPolicy`](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/create-iam-roles-for-cloudwatch-agent.html) is required for the CloudWatch Agent log shipping configured by cloud-init.
 
 ### 5.2 IMDSv2 Enforced
 
-Blueprint 01 enforces IMDSv2 on every instance:
+Blueprint 01 enforces [IMDSv2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html) on every instance:
 
 ```hcl
 metadata_options {
@@ -166,23 +167,23 @@ SSH root login is disabled (`PermitRootLogin no`) on all nodes.
 
 ### 6.1 Cloud-Init — What Runs at First Boot
 
-Both cloud-init scripts (`cloud-init-deb.yaml` for Debian/Ubuntu, `cloud-init-rhel.yaml` for RHEL/AlmaLinux) perform the same logical steps at first boot:
+Both [cloud-init](https://cloudinit.readthedocs.io/) scripts (`cloud-init-deb.yaml` for Debian/Ubuntu, `cloud-init-rhel.yaml` for RHEL/AlmaLinux) perform the same logical steps at first boot:
 
 1. Apply all pending OS security updates
-2. Install Docker CE, `docker-compose-plugin`, `jq`, `unzip`, and AWS CLI v2 (with GPG signature verification)
-3. Install and enable the AWS SSM Agent
-4. Install and enable the CloudWatch Agent
+2. Install [Docker CE](https://docs.docker.com/engine/install/), `docker-compose-plugin`, `jq`, `unzip`, and [AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) (with GPG signature verification)
+3. Install and enable the [AWS SSM Agent](https://docs.aws.amazon.com/systems-manager/latest/userguide/ssm-agent.html)
+4. Install and enable the [CloudWatch Agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Install-CloudWatch-Agent.html)
 5. Create the `aidome-ops` operator user
 6. Apply SSH hardening
 7. Apply sysctl kernel hardening
 8. Configure host firewall (`iptables` or `firewalld`)
-9. Install and start `fail2ban` (SSH brute-force protection)
-10. Enable `unattended-upgrades` (Debian) / `dnf-automatic` (RHEL) for security-only patches
-11. Write and load CIS-aligned auditd rules
+9. Install and start [`fail2ban`](https://github.com/fail2ban/fail2ban) (SSH brute-force protection)
+10. Enable [`unattended-upgrades`](https://wiki.debian.org/UnattendedUpgrades) (Debian) / [`dnf-automatic`](https://dnf.readthedocs.io/en/latest/automatic.html) (RHEL) for security-only patches
+11. Write and load [CIS](https://www.cisecurity.org/cis-benchmarks)-aligned [auditd](https://man7.org/linux/man-pages/man8/auditd.8.html) rules
 
 ### 6.2 SSH Hardening
 
-Applied via `/etc/ssh/sshd_config.d/aidome-hardening.conf`:
+Applied via `/etc/ssh/sshd_config.d/aidome-hardening.conf` ([sshd_config reference](https://man.openbsd.org/sshd_config)):
 
 | Setting | Value |
 |---|---|
@@ -200,14 +201,14 @@ Applied via `/etc/ssh/sshd_config.d/aidome-hardening.conf`:
 
 ### 6.3 Kernel Hardening
 
-Applied via `/etc/sysctl.d/99-aidome-security.conf`:
+Applied via `/etc/sysctl.d/99-aidome-security.conf` ([sysctl reference](https://www.kernel.org/doc/html/latest/admin-guide/sysctl/)):
 
 | Setting | Value | Purpose |
 |---|---|---|
-| `kernel.randomize_va_space` | `2` | ASLR — full randomisation (CIS 1.5.2) |
+| `kernel.randomize_va_space` | `2` | ASLR — full randomisation ([CIS 1.5.2](https://www.cisecurity.org/cis-benchmarks)) |
 | `kernel.dmesg_restrict` | `1` | Hide kernel ring buffer from unprivileged users |
 | `kernel.kptr_restrict` | `2` | Hide kernel pointers in /proc |
-| `kernel.yama.ptrace_scope` | `1` | Restrict ptrace to parent processes |
+| `kernel.yama.ptrace_scope` | `1` | Restrict ptrace to parent processes ([Yama LSM](https://www.kernel.org/doc/html/latest/admin-guide/LSM/Yama.html)) |
 | `fs.suid_dumpable` | `0` | Prevent core dumps from setuid processes |
 | `net.ipv4.conf.all.rp_filter` | `1` | Reverse-path filtering (anti-spoofing) |
 | `net.ipv4.tcp_syncookies` | `1` | SYN-flood protection |
@@ -215,7 +216,7 @@ Applied via `/etc/sysctl.d/99-aidome-security.conf`:
 
 ### 6.4 CIS Auditd Rules
 
-`/etc/audit/rules.d/99-aidome-cis.rules` is written by cloud-init and loaded with `augenrules --load`:
+`/etc/audit/rules.d/99-aidome-cis.rules` is written by cloud-init and loaded with [`augenrules --load`](https://man7.org/linux/man-pages/man8/augenrules.8.html) ([CIS Linux Benchmark](https://www.cisecurity.org/cis-benchmarks)):
 
 | CIS Control | Reference | What is audited |
 |---|---|---|
@@ -237,7 +238,7 @@ Applied via `/etc/sysctl.d/99-aidome-security.conf`:
 
 ### 7.1 EBS Encryption at Rest
 
-Every EBS root volume created by Blueprint 01 uses encryption:
+Every [EBS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AmazonEBS.html) root volume created by Blueprint 01 uses [encryption](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSEncryption.html):
 
 ```hcl
 root_block_device {
@@ -246,9 +247,11 @@ root_block_device {
 }
 ```
 
+The optional `kms_key_id` accepts a [KMS key](https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html) ID or ARN. When omitted, the default AWS-managed `aws/ebs` key is used.
+
 ### 7.2 Encryption in Transit
 
-- AWS SSM Agent and CloudWatch Agent traffic is encrypted by the AWS service layer.
+- [AWS SSM Agent](https://docs.aws.amazon.com/systems-manager/latest/userguide/ssm-agent.html) and [CloudWatch Agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Install-CloudWatch-Agent.html) traffic is encrypted by the AWS service layer.
 - Docker daemon is not exposed over TCP; communication is via the Unix socket (`/var/run/docker.sock`) only.
 - SSH uses only public-key authentication over an encrypted channel.
 
@@ -258,13 +261,13 @@ root_block_device {
 
 ### 8.1 Docker CE Installed from the Official Repository
 
-Cloud-init installs Docker CE from `download.docker.com` using the official APT or DNF repository. GPG signatures are verified before installation. `docker-compose-plugin` is installed alongside Docker CE.
+Cloud-init installs [Docker CE](https://docs.docker.com/engine/install/) from `download.docker.com` using the official APT or DNF repository. GPG signatures are verified before installation. `docker-compose-plugin` is installed alongside Docker CE.
 
-AlmaLinux 9 and other RHEL-compatible distros use the CentOS Docker repository (`download.docker.com/linux/centos`) since Docker does not publish an AlmaLinux-specific repo; the CentOS 9 Stream packages are fully compatible.
+AlmaLinux 9 and other RHEL-compatible distros use the CentOS Docker repository (`download.docker.com/linux/centos`) since Docker does not publish an AlmaLinux-specific repo; the CentOS 9 Stream packages are fully compatible. See the [Docker install docs for RHEL](https://docs.docker.com/engine/install/rhel/) for background.
 
 ### 8.2 Docker Group Membership
 
-The `aidome-ops` user is added to the `docker` group rather than running containers via `sudo docker`. This avoids embedding root password prompts in operational workflows while still granting the required access.
+The `aidome-ops` user is added to the `docker` group rather than running containers via `sudo docker`. This avoids embedding root password prompts in operational workflows while still granting the required access. See [Manage Docker as a non-root user](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user) for the security implications of group membership.
 
 The Docker daemon runs as `root` (required for iptables/`DOCKER-USER` chain management on Blueprint 01 nodes). Rootless Docker is not used.
 
@@ -274,7 +277,7 @@ The Docker daemon runs as `root` (required for iptables/`DOCKER-USER` chain mana
 
 ### 9.1 Terraform Version Constraints
 
-Blueprint 01 pins the Terraform CLI and AWS provider versions:
+Blueprint 01 pins the Terraform CLI and AWS provider versions ([version constraint docs](https://developer.hashicorp.com/terraform/language/expressions/version-constraints)):
 
 ```hcl
 terraform {
@@ -288,7 +291,7 @@ terraform {
 }
 ```
 
-The `.terraform.lock.hcl` file is committed to the repository and records the exact provider version and checksums in use, ensuring reproducible applies across machines.
+The [`.terraform.lock.hcl` dependency lock file](https://developer.hashicorp.com/terraform/language/files/dependency-lock) is committed to the repository and records the exact provider version and checksums in use, ensuring reproducible applies across machines.
 
 ### 9.2 Other Tooling
 
@@ -296,7 +299,7 @@ When Blueprints 02 and 03 implement their Helm and Ansible toolchains, they will
 
 ### 9.3 Cloud-Init Idempotency
 
-Cloud-init steps are written to be re-runnable. Package installations use idempotent package manager commands; file writes use `write_files` which overwrites deterministically. Where a step is not naturally idempotent (e.g., a firewall rule reload), it is gated with `|| true` or an existence check so that re-runs do not fail the entire script.
+[Cloud-init](https://cloudinit.readthedocs.io/en/latest/reference/modules.html) steps are written to be re-runnable. Package installations use idempotent package manager commands; file writes use `write_files` which overwrites deterministically. Where a step is not naturally idempotent (e.g., a firewall rule reload), it is gated with `|| true` or an existence check so that re-runs do not fail the entire script.
 
 ---
 
@@ -304,7 +307,7 @@ Cloud-init steps are written to be re-runnable. Package installations use idempo
 
 ### 10.1 CloudWatch Agent
 
-Both cloud-init scripts install the CloudWatch Agent and write a base configuration to `/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json`. Out of the box it ships:
+Both cloud-init scripts install the [Amazon CloudWatch Agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Install-CloudWatch-Agent.html) and write a base configuration to `/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json`. Out of the box it ships:
 
 | Log file | CloudWatch log group |
 |---|---|
@@ -356,11 +359,11 @@ aws cloudformation delete-stack --stack-name aidome-ec2
 aws cloudformation wait stack-delete-complete --stack-name aidome-ec2
 ```
 
-> ⚠️ Instance termination is irreversible. Create an AMI snapshot before any major change if you need to preserve the configured state.
+> ⚠️ Instance termination is irreversible. [Create an AMI snapshot](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami-ebs.html) before any major change if you need to preserve the configured state.
 
 ### 11.2 Rollback Approach for Other Blueprints
 
-Blueprint 02 (Kubernetes) will use `helm rollback <release> <revision>` for application-layer changes. Blueprint 03 (Air-Gapped/Ansible) rollback procedures will be documented in the blueprint README when that blueprint is completed.
+Blueprint 02 (Kubernetes) will use [`helm rollback`](https://helm.sh/docs/helm/helm_rollback/) `<release> <revision>` for application-layer changes. Blueprint 03 (Air-Gapped/Ansible) rollback procedures will be documented in the blueprint README when that blueprint is completed.
 
 ---
 
@@ -379,4 +382,63 @@ This section records architectural decisions that are not obvious from the code 
 | D-007 | `aidome-ops` user with full sudo, not a scoped sudo rule | Unrestricted sudo is required by the AIdome installer. Customers who want to tighten this post-install can replace the sudoers rule once the product is deployed. |
 | D-008 | Air-Gapped blueprint uses Ansible, not Terraform | Terraform requires network access to provider APIs at plan/apply time. Ansible with an offline inventory has no such dependency, making it the natural choice for fully isolated environments. |
 
+---
 
+## 13. References
+
+### AWS
+
+| Topic | Link |
+|---|---|
+| VPC and subnets | <https://docs.aws.amazon.com/vpc/latest/userguide/> |
+| Security groups | <https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html> |
+| IAM instance profiles | <https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html> |
+| IAM least privilege | <https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html> |
+| SSM Session Manager | <https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager.html> |
+| SSM Agent | <https://docs.aws.amazon.com/systems-manager/latest/userguide/ssm-agent.html> |
+| `AmazonSSMManagedInstanceCore` policy | <https://docs.aws.amazon.com/systems-manager/latest/userguide/setup-instance-permissions.html> |
+| EC2 instance metadata (IMDSv2) | <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html> |
+| EBS encryption | <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSEncryption.html> |
+| AWS KMS concepts | <https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html> |
+| Amazon CloudWatch Agent | <https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Install-CloudWatch-Agent.html> |
+| `CloudWatchAgentServerPolicy` | <https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/create-iam-roles-for-cloudwatch-agent.html> |
+| Creating an AMI snapshot | <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami-ebs.html> |
+| AWS CLI v2 installation | <https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html> |
+
+### Terraform
+
+| Topic | Link |
+|---|---|
+| Version constraints | <https://developer.hashicorp.com/terraform/language/expressions/version-constraints> |
+| Dependency lock file | <https://developer.hashicorp.com/terraform/language/files/dependency-lock> |
+| `terraform destroy` | <https://developer.hashicorp.com/terraform/cli/commands/destroy> |
+| HashiCorp AWS provider | <https://registry.terraform.io/providers/hashicorp/aws/latest/docs> |
+
+### Docker
+
+| Topic | Link |
+|---|---|
+| Docker CE install (Ubuntu) | <https://docs.docker.com/engine/install/ubuntu/> |
+| Docker CE install (Debian) | <https://docs.docker.com/engine/install/debian/> |
+| Docker CE install (RHEL) | <https://docs.docker.com/engine/install/rhel/> |
+| Manage Docker as non-root user | <https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user> |
+| Docker packet filtering / `DOCKER-USER` | <https://docs.docker.com/engine/network/packet-filtering-firewalls/#docker-on-a-router> |
+
+### Linux and OS Hardening
+
+| Topic | Link |
+|---|---|
+| cloud-init | <https://cloudinit.readthedocs.io/> |
+| cloud-init modules reference | <https://cloudinit.readthedocs.io/en/latest/reference/modules.html> |
+| auditd | <https://man7.org/linux/man-pages/man8/auditd.8.html> |
+| augenrules | <https://man7.org/linux/man-pages/man8/augenrules.8.html> |
+| sshd_config | <https://man.openbsd.org/sshd_config> |
+| sysctl kernel parameters | <https://www.kernel.org/doc/html/latest/admin-guide/sysctl/> |
+| Yama LSM (ptrace_scope) | <https://www.kernel.org/doc/html/latest/admin-guide/LSM/Yama.html> |
+| iptables / netfilter | <https://www.netfilter.org/projects/iptables/index.html> |
+| firewalld | <https://firewalld.org/documentation/> |
+| fail2ban | <https://github.com/fail2ban/fail2ban> |
+| unattended-upgrades (Debian) | <https://wiki.debian.org/UnattendedUpgrades> |
+| dnf-automatic (RHEL) | <https://dnf.readthedocs.io/en/latest/automatic.html> |
+| CIS Benchmarks | <https://www.cisecurity.org/cis-benchmarks> |
+| RFC 1918 (private address space) | <https://datatracker.ietf.org/doc/html/rfc1918> |
