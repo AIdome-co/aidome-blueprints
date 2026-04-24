@@ -175,27 +175,6 @@ sudo bash aidome.sh
 
 ---
 
-## Validation
-
-Run these from the repository root before opening a PR that touches this blueprint:
-
-```bash
-# Terraform
-terraform -chdir=blueprints/02-aws-ec2/terraform fmt -check -recursive
-terraform -chdir=blueprints/02-aws-ec2/terraform init -backend=false
-terraform -chdir=blueprints/02-aws-ec2/terraform validate
-
-# CloudFormation
-cfn-lint blueprints/02-aws-ec2/cloudformation/ec2-private.yaml
-
-# cloud-init YAML
-yamllint blueprints/02-aws-ec2/scripts/cloud-init.yaml
-```
-
-CI runs the equivalent checks in [`.github/workflows/validate.yml`](../../.github/workflows/validate.yml).
-
----
-
 ## Security notes
 
 - **SSM Session Manager is preferred** over SSH for private-subnet access. No bastion host or open inbound ports needed; access is IAM-controlled and logged to CloudTrail.
