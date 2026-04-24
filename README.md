@@ -10,10 +10,10 @@
 | # | Blueprint | Complexity | Cloud | HA | Use-case |
 |---|-----------|-----------|-------|----|----------|
 | 01 | [Quickstart – Local](blueprints/01-quickstart-local/README.md) | ⭐ Beginner | None (laptop) | ❌ | Evaluation / development |
-| 02 | [Single-Node – AWS](blueprints/02-single-node-aws/README.md) | ⭐⭐ Intermediate | AWS | ❌ | Small teams / PoC |
-| 03 | [HA Kubernetes](blueprints/03-ha-kubernetes/README.md) | ⭐⭐⭐ Advanced | AWS / GCP / Azure | ✅ | Production workloads |
-| 04 | [Air-Gapped](blueprints/04-air-gapped/README.md) | ⭐⭐⭐⭐ Expert | On-prem / private cloud | ✅ | Regulated / offline environments |
-| 05 | [AWS EC2](blueprints/05-aws-ec2/README.md) | ⭐⭐ Intermediate | AWS | ❌ | Customer EC2 prep for AIDome installation |
+| 02 | [AWS EC2](blueprints/02-aws-ec2/README.md) | ⭐⭐ Intermediate | AWS | ❌ | Customer EC2 prep for AIDome installation |
+| 03 | [Single-Node – AWS](blueprints/03-single-node-aws/README.md) | ⭐⭐ Intermediate | AWS | ❌ | Small teams / PoC |
+| 04 | [HA Kubernetes](blueprints/04-ha-kubernetes/README.md) | ⭐⭐⭐ Advanced | AWS / GCP / Azure | ✅ | Production workloads |
+| 05 | [Air-Gapped](blueprints/05-air-gapped/README.md) | ⭐⭐⭐⭐ Expert | On-prem / private cloud | ✅ | Regulated / offline environments |
 
 ---
 
@@ -30,23 +30,23 @@ aidome-blueprints/
 │   │   ├── README.md
 │   │   ├── architecture.png
 │   │   └── docker-compose.yml
-│   ├── 02-single-node-aws/
+│   ├── 02-aws-ec2/
+│   │   ├── README.md
+│   │   ├── cloudformation/
+│   │   ├── scripts/
+│   │   └── terraform/
+│   ├── 03-single-node-aws/
 │   │   ├── README.md
 │   │   ├── architecture.png
 │   │   └── terraform/
-│   ├── 03-ha-kubernetes/
+│   ├── 04-ha-kubernetes/
 │   │   ├── README.md
 │   │   ├── architecture.png
 │   │   ├── terraform/
 │   │   └── helm/
-│   ├── 04-air-gapped/
-│   │   ├── README.md
-│   │   └── ansible/
-│   └── 05-aws-ec2/
+│   └── 05-air-gapped/
 │       ├── README.md
-│       ├── cloudformation/
-│       ├── scripts/
-│       └── terraform/
+│       └── ansible/
 ├── shared/
 │   ├── terraform-modules/
 │   └── scripts/
@@ -79,56 +79,56 @@ No cloud account required—ideal for first-time evaluation and local developmen
 
 ---
 
-### 02 · Single-Node – AWS
+### 02 · AWS EC2
 
-**File:** [`blueprints/02-single-node-aws/README.md`](blueprints/02-single-node-aws/README.md)
-
-Deploy AIdome on a single EC2 instance with Terraform.  
-Suitable for small teams and proof-of-concept deployments where HA is not required.
-
-**Key files:**
-- [`terraform/`](blueprints/02-single-node-aws/terraform/)
-- [`architecture.png`](blueprints/02-single-node-aws/architecture.png)
-
----
-
-### 03 · HA Kubernetes
-
-**File:** [`blueprints/03-ha-kubernetes/README.md`](blueprints/03-ha-kubernetes/README.md)
-
-Highly-available, multi-replica deployment on Kubernetes (EKS / GKE / AKS).  
-Includes Terraform for infrastructure and Helm charts for the AIdome application layer.
-
-**Key files:**
-- [`terraform/`](blueprints/03-ha-kubernetes/terraform/)
-- [`helm/`](blueprints/03-ha-kubernetes/helm/)
-- [`architecture.png`](blueprints/03-ha-kubernetes/architecture.png)
-
----
-
-### 04 · Air-Gapped
-
-**File:** [`blueprints/04-air-gapped/README.md`](blueprints/04-air-gapped/README.md)
-
-Deploy AIdome in a fully isolated, internet-free environment using Ansible.  
-Designed for regulated industries and on-premises private-cloud setups.
-
-**Key files:**
-- [`ansible/`](blueprints/04-air-gapped/ansible/)
-
----
-
-### 05 · AWS EC2
-
-**File:** [`blueprints/05-aws-ec2/README.md`](blueprints/05-aws-ec2/README.md)
+**File:** [`blueprints/02-aws-ec2/README.md`](blueprints/02-aws-ec2/README.md)
 
 Provision a hardened, private-subnet EC2 instance that bootstraps itself via cloud-init  
 and is ready for the customer to run `aidome.sh` to install the AIDome product.
 
 **Key files:**
-- [`terraform/`](blueprints/05-aws-ec2/terraform/)
-- [`cloudformation/`](blueprints/05-aws-ec2/cloudformation/)
-- [`scripts/cloud-init.yaml`](blueprints/05-aws-ec2/scripts/cloud-init.yaml)
+- [`terraform/`](blueprints/02-aws-ec2/terraform/)
+- [`cloudformation/`](blueprints/02-aws-ec2/cloudformation/)
+- [`scripts/cloud-init.yaml`](blueprints/02-aws-ec2/scripts/cloud-init.yaml)
+
+---
+
+### 03 · Single-Node – AWS
+
+**File:** [`blueprints/03-single-node-aws/README.md`](blueprints/03-single-node-aws/README.md)
+
+Deploy AIdome on a single EC2 instance with Terraform.  
+Suitable for small teams and proof-of-concept deployments where HA is not required.
+
+**Key files:**
+- [`terraform/`](blueprints/03-single-node-aws/terraform/)
+- [`architecture.png`](blueprints/03-single-node-aws/architecture.png)
+
+---
+
+### 04 · HA Kubernetes
+
+**File:** [`blueprints/04-ha-kubernetes/README.md`](blueprints/04-ha-kubernetes/README.md)
+
+Highly-available, multi-replica deployment on Kubernetes (EKS / GKE / AKS).  
+Includes Terraform for infrastructure and Helm charts for the AIdome application layer.
+
+**Key files:**
+- [`terraform/`](blueprints/04-ha-kubernetes/terraform/)
+- [`helm/`](blueprints/04-ha-kubernetes/helm/)
+- [`architecture.png`](blueprints/04-ha-kubernetes/architecture.png)
+
+---
+
+### 05 · Air-Gapped
+
+**File:** [`blueprints/05-air-gapped/README.md`](blueprints/05-air-gapped/README.md)
+
+Deploy AIdome in a fully isolated, internet-free environment using Ansible.  
+Designed for regulated industries and on-premises private-cloud setups.
+
+**Key files:**
+- [`ansible/`](blueprints/05-air-gapped/ansible/)
 
 ---
 
