@@ -1,30 +1,44 @@
 #cloud-config
 #
-# AIDome Demo VM Cloud-Init Configuration
+# AIDome Dev VM Cloud-Init Configuration
 # ==========================================
-# This cloud-init configuration sets up a secure demo VM for AIDome with:
-# - Hardened SSH configuration (ports 22 + 14022; 22 can be disabled after verification)
+# This cloud-init configuration sets up a secure EC2 instance for AIDome with:
+# - Hardened SSH configuration (port 22)
 # - Fail2ban intrusion prevention
 # - iptables firewall
-# - Docker Engine installation
-# - Python development environment
+# - Docker Engine installation (via official APT repository)
+# - AWS SSM Agent for session management (recommended over bastion hosts)
+# - Dedicated non-root operator account (aidome-ops)
+#
+# After boot, connect via SSH or SSM Session Manager and run:
+#   curl -fsSL https://your-bucket/aidome.sh | sudo bash
 #
 # References:
 # - https://cloudinit.readthedocs.io/
-# - https://cloudinit.readthedocs.io/en/latest/explanation/configuration.html
-# - https://docs.docker.com/engine/install/
+# - https://docs.docker.com/engine/install/ubuntu/
+# - https://docs.aws.amazon.com/systems-manager/latest/userguide/ssm-agent.html
 #
-# Version: 1.0
-# Last Updated: 2024-12-24
+# Version: 1.1
 # ==========================================
 
 preserve_hostname: false
-hostname: aidome-demo-vm
-fqdn: aidome-demo-vm.local
+hostname: aidome-dev-vm
+fqdn: aidome-dev-vm.local
 ssh_pwauth: false
 
 # Timezone configuration
 timezone: UTC
+
+# Explicit operator account — do NOT rely on the cloud provider's default user alone
+users:
+  - default
+  - name: aidome-ops
+    gecos: AIDome Operator
+    groups: [sudo, docker, adm]
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: true
+    # Inject SSH public key via EC2 key_name or pass ssh_authorized_keys here
 
 # APT configuration
 apt:
@@ -43,13 +57,12 @@ bootcmd:
   - [ cloud-init-per, instance, set-noninteractive, sh, -c, 'echo "debconf debconf/frontend select Noninteractive" | debconf-set-selections' ]
 
 write_files:
-  # SSH listen on ports 22 and 14022 (drop-in keeps vendor defaults intact)
-  - path: /etc/ssh/sshd_config.d/port-14022.conf
+  # SSH hardening — port 22 only (customers may change this after setup)
+  - path: /etc/ssh/sshd_config.d/aidome-hardening.conf
     permissions: '0644'
     owner: root:root
     content: |
       Port 22
-      Port 14022
       AddressFamily any
 
       # Authentication
@@ -73,8 +86,8 @@ write_files:
       PrintLastLog yes
       TCPKeepAlive yes
       Compression no
-      AllowTcpForwarding yes
-      AllowAgentForwarding yes
+      AllowTcpForwarding no
+      AllowAgentForwarding no
       GatewayPorts no
       PermitTunnel no
 
@@ -84,7 +97,7 @@ write_files:
     owner: root:root
     content: |
       ******************************************************************
-      *                    AIDome Demo VM System                      *
+      *                     AIDome Dev VM System                      *
       *                                                                *
       *  WARNING: Unauthorized access is prohibited and will be       *
       *  prosecuted to the full extent of the law.                    *
@@ -98,26 +111,22 @@ write_files:
     owner: root:root
     content: |
 
-      Welcome to AIDome Demo VM
-      =========================
+      Welcome to AIDome Dev VM
+      ========================
 
       System Information:
-      - Hostname: aidome-demo-vm
-      - Python venv: /opt/aidome_dev_venv
+      - Hostname: aidome-dev-vm
       - Docker: Docker Engine (rootful)
+      - SSM Agent: enabled (use SSM Session Manager for keyless access)
 
-      Quick Start:
-      1. Open root shell: sudo -i
-      2. Activate Python venv: source /opt/aidome_dev_venv/bin/activate
+      Quick Start — install AIDome:
+      1. Connect via SSH or AWS SSM Session Manager
+      2. Run the AIDome installer (obtain the URL from your AIDome account or support team):
+         curl -fsSL https://<your-aidome-download-url>/aidome.sh | sudo bash
       3. Check Docker: docker ps
       4. Check firewall rules: sudo iptables -L -n
 
-      After verification (recommended):
-      - Disable SSH: sudo systemctl disable --now ssh
-
-      Documentation: See /var/log/cloud-init.log and /etc/motd
-
-      Last cloud-init run: Check /var/log/cloud-init.log
+      Documentation: See /var/log/cloud-init.log
 
   # Sysctl security hardening
   - path: /etc/sysctl.d/99-aidome-security.conf
@@ -125,9 +134,10 @@ write_files:
     owner: root:root
     content: |
       # Security Configuration
-      # IP Forwarding (needed for VPNs)
-      net.ipv4.ip_forward = 1
-      net.ipv6.conf.all.forwarding = 1
+
+      # IP Forwarding — disabled by default; uncomment only if VPN/routing is required
+      # net.ipv4.ip_forward = 1
+      # net.ipv6.conf.all.forwarding = 1
 
       # Network security
       net.ipv4.conf.all.rp_filter = 1
@@ -165,37 +175,32 @@ write_files:
       fs.protected_hardlinks = 1
       fs.protected_symlinks = 1
 
-  # Fail2ban jail for SSH on ports 22 and 14022
-  - path: /etc/fail2ban/jail.d/sshd-multiport.local
+  # Fail2ban jail for SSH on port 22
+  - path: /etc/fail2ban/jail.d/sshd.local
     permissions: '0644'
     owner: root:root
     content: |
       [sshd]
       enabled  = true
-      port     = 22,14022
+      port     = 22
       filter   = sshd
       logpath  = %(sshd_log)s
       maxretry = 5
-      bantime  = 3600  # 1 hour in seconds
-      findtime = 600   # 10 minutes in seconds
+      bantime  = 3600
+      findtime = 600
 
       [DEFAULT]
-      # WARNING: Update email addresses before production
       destemail = root@localhost
-      sender = fail2ban@aidome-demo-vm
+      sender = fail2ban@aidome-dev-vm
       action = %(action_)s
 
-  # IPv4 firewall - SSH on ports 22 and 14022
+  # IPv4 firewall — SSH on port 22 + HTTPS from RFC1918
   - path: /etc/iptables/rules.v4
     permissions: '0644'
     owner: root:root
     content: |
-      # Allow only specific inbound:
-      # - SSH on ports 22/14022 (22 intended for initial boot; disable after verification)
-      # - HTTPS (443/tcp)
-      # Host-level defense-in-depth:
-      # - Restrict 14022/443 to RFC1918 private space for private-subnet access.
-      # - Also enforce source filtering at AWS Security Group/NACL level.
+      # Host-level defense-in-depth (AWS Security Group is the primary perimeter).
+      # Restrict HTTPS inbound to RFC1918 private space.
       *filter
       :INPUT DROP [0:0]
       :FORWARD DROP [0:0]
@@ -207,13 +212,8 @@ write_files:
 
       -A INPUT -p icmp --icmp-type echo-request -j ACCEPT
 
-      # SSH on port 22 (temporary initial access)
+      # SSH on port 22
       -A INPUT -p tcp --dport 22 -j ACCEPT
-
-      # SSH on port 14022 from RFC1918 private IPv4 ranges
-      -A INPUT -s 10.0.0.0/8 -p tcp --dport 14022 -j ACCEPT
-      -A INPUT -s 172.16.0.0/12 -p tcp --dport 14022 -j ACCEPT
-      -A INPUT -s 192.168.0.0/16 -p tcp --dport 14022 -j ACCEPT
 
       # HTTPS from RFC1918 private IPv4 ranges
       -A INPUT -s 10.0.0.0/8 -p tcp --dport 443 -j ACCEPT
@@ -222,7 +222,7 @@ write_files:
 
       COMMIT
 
-  # IPv6 firewall - SSH on ports 22 and 14022
+  # IPv6 firewall — SSH on port 22 + HTTPS from ULA space
   - path: /etc/iptables/rules.v6
     permissions: '0644'
     owner: root:root
@@ -231,19 +231,13 @@ write_files:
       :INPUT DROP [0:0]
       :FORWARD DROP [0:0]
       :OUTPUT ACCEPT [0:0]
-      # Host-level defense-in-depth:
-      # - Restrict 14022/443 to ULA IPv6 space (fc00::/7).
-      # - Also enforce source filtering at AWS Security Group/NACL level.
 
       # Allow loopback and established/related
       -A INPUT -i lo -j ACCEPT
       -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 
-      # SSH over IPv6 on port 22 (temporary initial access)
+      # SSH over IPv6 on port 22
       -A INPUT -p tcp --dport 22 -j ACCEPT
-
-      # SSH over IPv6 on port 14022 from ULA space
-      -A INPUT -s fc00::/7 -p tcp --dport 14022 -j ACCEPT
 
       # HTTPS over IPv6 from ULA space
       -A INPUT -s fc00::/7 -p tcp --dport 443 -j ACCEPT
@@ -254,31 +248,29 @@ write_files:
 package_update: true
 package_upgrade: true
 
-# Packages to install - better than using apt-get in runcmd
+# Packages to install
 packages:
   - vim
   - curl
   - htop
   - wget
   - ca-certificates
+  - gnupg
+  - lsb-release
   - python3
-  - python3-pip
-  - python3-venv
   - git
-  - snmp
   - net-tools
   - dnsutils
   - iproute2
   - traceroute
   - mtr
-  - telnet
   - iptables-persistent
   - netfilter-persistent
   - fail2ban
   - unattended-upgrades
 
 runcmd:
-  - 'echo "### AIDome Demo VM Bootstrap Starting..."'
+  - 'echo "### AIDome Dev VM Bootstrap Starting..."'
   - 'echo "Start time: $(date)"'
 
   # Apply sysctl
@@ -289,39 +281,50 @@ runcmd:
 
   # SSH restart
   - sleep 2
-  - 'sudo systemctl restart ssh || systemctl restart sshd || echo "Warning: SSH restart failed"'
-  - 'echo "SSH restarted with ports 22 and 14022"'
+  - 'systemctl restart ssh || systemctl restart sshd || echo "Warning: SSH restart failed"'
+  - 'echo "SSH restarted on port 22"'
 
   # Fail2ban
-  - 'sudo systemctl enable fail2ban || true'
-  - 'sudo systemctl restart fail2ban || echo "Warning: fail2ban failed"'
+  - 'systemctl enable fail2ban || true'
+  - 'systemctl restart fail2ban || echo "Warning: fail2ban failed"'
 
   # Display system information
-  - 'echo "System Information:"'
   - 'cat /etc/os-release || true'
   - 'echo "Kernel: $(uname -r)"'
 
-  # Set up Python virtual environment
-  - 'echo "Setting up Python virtual environment..."'
-  - 'python3 -m venv /opt/aidome_dev_venv || echo "Warning: Python venv creation failed"'
-  - '/opt/aidome_dev_venv/bin/pip install --upgrade pip 2>/dev/null || echo "Warning: pip upgrade failed"'
-  - 'echo "Python venv setup completed"'
-
-  # Install Docker Engine (rootful)
-  - 'echo "Installing Docker Engine..."'
+  # Install Docker Engine via official APT repository (GPG-verified — no pipe-to-shell)
+  - 'echo "Installing Docker Engine via official APT repository..."'
   - |
-    curl -fsSL https://get.docker.com -o /tmp/get-docker.sh || {
-      echo "Warning: Docker install script download failed";
-      exit 0;
-    }
-    sh /tmp/get-docker.sh || {
-      echo "Warning: Docker install failed";
-      exit 0;
-    }
-    rm -f /tmp/get-docker.sh 2>/dev/null || true
-
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+      | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    chmod a+r /etc/apt/keyrings/docker.gpg
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+      https://download.docker.com/linux/ubuntu \
+      $(lsb_release -cs) stable" \
+      > /etc/apt/sources.list.d/docker.list
+    apt-get update -qq
+    apt-get install -y docker-ce docker-ce-cli containerd.io \
+      docker-buildx-plugin docker-compose-plugin \
+      || echo "Warning: Docker install failed"
     systemctl enable --now docker.service docker.socket || true
     docker --version || true
+
+  # Add aidome-ops user to docker group (if not already via users: block)
+  - 'usermod -aG docker aidome-ops 2>/dev/null || true'
+
+  # Install AWS SSM Agent (enables SSM Session Manager — recommended over bastion hosts)
+  - 'echo "Installing AWS SSM Agent..."'
+  - |
+    snap install amazon-ssm-agent --classic 2>/dev/null \
+      || (
+        apt-get install -y amazon-ssm-agent 2>/dev/null \
+        || echo "Warning: SSM agent install failed; install manually if SSM access is required"
+      )
+    systemctl enable --now snap.amazon-ssm-agent.amazon-ssm-agent.service 2>/dev/null \
+      || systemctl enable --now amazon-ssm-agent 2>/dev/null \
+      || true
 
   # Load and persist firewall rules
   - 'netfilter-persistent reload || echo "Warning: netfilter-persistent reload failed"'
@@ -335,20 +338,19 @@ runcmd:
   # Status
   - 'echo "### Bootstrap Summary"'
   - 'echo "Hostname: $(hostname)"'
-  - 'echo "Sessions: $(who)"'
   - 'echo "Docker status: $(systemctl is-active docker || echo inactive)"'
   - 'echo "Fail2ban status: $(systemctl is-active fail2ban || echo inactive)"'
   - 'echo "Firewall status: $(systemctl is-active netfilter-persistent || echo inactive)"'
   - 'echo "End time: $(date)"'
-  - 'echo "### Cloud-init completed successfully. System is ready!"'
+  - 'echo "### Cloud-init completed. Instance is ready."'
+  - 'echo "### Connect via SSH or SSM Session Manager, then run the AIDome installer (obtain URL from your AIDome account or support team)."'
 
-# Track completion with detailed message
-final_message: "AIDome Demo VM setup completed at $TIMESTAMP after $UPTIME seconds"
+final_message: "AIDome Dev VM setup completed at $TIMESTAMP after $UPTIME seconds. Connect and run aidome.sh to install AIDome."
 
-# Reboot the VM after cloud-init completes
+# Reboot the VM after cloud-init completes to ensure all kernel/network settings are applied
 power_state:
-  delay: 1              # Reboot 1 minute after cloud-init completes
+  delay: 1
   mode: reboot
-  message: "Rebooting to complete AIDome Demo VM setup..."
-  timeout: 30           # Wait up to 30 seconds for cloud-init to finish
-  condition: true       # Always reboot
+  message: "Rebooting to complete AIDome Dev VM setup..."
+  timeout: 30
+  condition: true

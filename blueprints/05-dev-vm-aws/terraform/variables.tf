@@ -1,7 +1,7 @@
 variable "name_prefix" {
   description = "Name prefix for created resources"
   type        = string
-  default     = "demo-vm"
+  default     = "dev-vm"
 }
 
 variable "vpc_id" {
@@ -10,12 +10,12 @@ variable "vpc_id" {
 }
 
 variable "private_subnet_id" {
-  description = "Private subnet ID for the demo VM"
+  description = "Private subnet ID for the dev VM"
   type        = string
 }
 
 variable "ami_id" {
-  description = "AMI ID for the demo VM"
+  description = "AMI ID for the dev VM (Ubuntu 22.04 LTS recommended)"
   type        = string
 }
 
@@ -32,7 +32,7 @@ variable "key_name" {
 }
 
 variable "iam_instance_profile_name" {
-  description = "Optional IAM instance profile name"
+  description = "Optional IAM instance profile name (required for SSM Session Manager access)"
   type        = string
   default     = null
 }
@@ -55,6 +55,12 @@ variable "root_volume_size" {
   default     = 30
 }
 
+variable "metadata_hop_limit" {
+  description = "IMDSv2 HTTP PUT response hop limit (1 for strongest isolation; increase only if required)"
+  type        = number
+  default     = 1
+}
+
 variable "tags" {
   description = "Extra tags to apply to all resources"
   type        = map(string)
@@ -62,7 +68,7 @@ variable "tags" {
 }
 
 variable "cloud_init_template_path" {
-  description = "Path to the cloud-init template consumed by this module"
+  description = "Path to the cloud-init template consumed by this module (defaults to scripts/cloud-init.yaml)"
   type        = string
   default     = null
 }

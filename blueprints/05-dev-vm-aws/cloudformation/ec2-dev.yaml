@@ -1,10 +1,10 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: AIDome demo EC2 instance in a private subnet
+Description: AIDome dev EC2 instance in a private subnet
 
 Parameters:
   NamePrefix:
     Type: String
-    Default: demo-vm
+    Default: dev-vm
     Description: Name prefix for created resources
 
   VpcId:
@@ -13,11 +13,11 @@ Parameters:
 
   PrivateSubnetId:
     Type: AWS::EC2::Subnet::Id
-    Description: Private subnet ID for the demo VM
+    Description: Private subnet ID for the dev VM
 
   AmiId:
     Type: AWS::EC2::Image::Id
-    Description: AMI ID for the demo VM
+    Description: AMI ID for the dev VM (Ubuntu 22.04 LTS recommended)
 
   InstanceType:
     Type: String
@@ -32,29 +32,42 @@ Parameters:
   IamInstanceProfileName:
     Type: String
     Default: ''
-    Description: Optional IAM instance profile name
+    Description: Optional IAM instance profile name (required for SSM Session Manager access)
 
   AllowedSshCidr:
     Type: String
     Default: ''
     Description: Optional CIDR allowed to SSH on port 22
 
+  AdditionalSecurityGroupId:
+    Type: String
+    Default: ''
+    Description: Optional additional security group ID to attach to the instance (attach more post-launch via console/CLI if needed)
+
   RootVolumeSize:
     Type: Number
     Default: 30
-    # 30 GiB baseline for OS + Docker/workload artifacts; tune per workload.
-    Description: Root EBS volume size in GiB
+    Description: Root EBS volume size in GiB (30 GiB baseline for OS + Docker/workload artifacts; tune per workload)
 
   RootDeviceName:
     Type: String
     Default: /dev/xvda
-    # Verify for your AMI; many Amazon Linux 2023/newer AMIs use /dev/xvda.
-    Description: Root block device name for the selected AMI (for example /dev/sda1 or /dev/xvda)
+    Description: Root block device name for the selected AMI — verify for your AMI (Ubuntu 22.04 LTS typically uses /dev/sda1 or /dev/xvda)
 
   MetadataHopLimit:
     Type: Number
     Default: 1
     Description: IMDSv2 hop limit (use 1 for strongest isolation, increase only if required)
+
+  Environment:
+    Type: String
+    Default: dev
+    Description: Environment tag value
+
+  Project:
+    Type: String
+    Default: aidome
+    Description: Project tag value
 
   CloudInitUserData:
     Type: String
@@ -67,16 +80,16 @@ Conditions:
   HasInstanceProfile: !Not [!Equals [!Ref IamInstanceProfileName, '']]
   HasAllowedSshCidr: !Not [!Equals [!Ref AllowedSshCidr, '']]
   HasCloudInitUserData: !Not [!Equals [!Ref CloudInitUserData, '']]
+  HasAdditionalSg: !Not [!Equals [!Ref AdditionalSecurityGroupId, '']]
 
 Resources:
   VmPrivateSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Demo VM private-subnet security group
+      GroupDescription: Dev VM private-subnet security group
       VpcId: !Ref VpcId
       SecurityGroupEgress:
-        # Default-open egress for parity with existing Terraform template.
-        # Restrict to required CIDRs/endpoints for stricter least-privilege environments.
+        # Default-open egress; restrict to required CIDRs/endpoints for stricter environments.
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
         - IpProtocol: -1
@@ -84,6 +97,10 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${NamePrefix}-private-sg'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref Project
 
   VmSshIngress:
     Type: AWS::EC2::SecurityGroupIngress
@@ -107,8 +124,11 @@ Resources:
         - DeviceIndex: 0
           AssociatePublicIpAddress: false
           SubnetId: !Ref PrivateSubnetId
-          GroupSet:
-            - !Ref VmPrivateSecurityGroup
+          GroupSet: !If
+            - HasAdditionalSg
+            - - !Ref VmPrivateSecurityGroup
+              - !Ref AdditionalSecurityGroupId
+            - - !Ref VmPrivateSecurityGroup
       UserData: !If
         - HasCloudInitUserData
         - Fn::Base64: !Ref CloudInitUserData
@@ -127,6 +147,10 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${NamePrefix}-private-vm'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref Project
 
 Outputs:
   InstanceId:

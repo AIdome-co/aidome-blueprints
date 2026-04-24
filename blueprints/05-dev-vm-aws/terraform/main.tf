@@ -10,13 +10,13 @@ terraform {
 }
 
 locals {
-  effective_cloud_init_template_path = coalesce(var.cloud_init_template_path, "${path.module}/../scripts/demo-vm-cloud-init.yaml")
+  effective_cloud_init_template_path = coalesce(var.cloud_init_template_path, "${path.module}/../scripts/cloud-init.yaml")
   cloud_init_user_data               = fileexists(local.effective_cloud_init_template_path) ? file(local.effective_cloud_init_template_path) : null
 }
 
 resource "aws_security_group" "vm_private_sg" {
   name_prefix = "${var.name_prefix}-private-"
-  description = "Demo VM private-subnet security group"
+  description = "Dev VM private-subnet security group"
   vpc_id      = var.vpc_id
 
   egress {
@@ -66,7 +66,8 @@ resource "aws_instance" "vm_instance" {
   metadata_options {
     http_endpoint = "enabled"
     # Enforce IMDSv2 to reduce SSRF credential-exposure risk.
-    http_tokens   = "required"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = var.metadata_hop_limit
   }
 
   lifecycle {
