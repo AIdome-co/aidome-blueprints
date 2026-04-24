@@ -104,6 +104,9 @@ Parameters:
 # Verify the exact device name for your chosen AMI with:
 #   aws ec2 describe-images --image-ids <ami-id> \
 #     --query 'Images[0].BlockDeviceMappings[*].DeviceName' --output text
+#
+# IMPORTANT: The keys in OsRootDevice must exactly match the AllowedValues list
+# for the OsType parameter above. When adding a new OS type, update both.
 Mappings:
   OsRootDevice:
     ubuntu-2404:

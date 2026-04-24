@@ -399,13 +399,20 @@ runcmd:
     . /etc/os-release
     case "${ID}" in
       rhel)
-        subscription-manager repos --enable "codeready-builder-for-rhel-${VERSION_ID%%.*}-$(uname -m)-rpms" 2>/dev/null || true
-        dnf install -y "https://dl.fedoraproject.org/pub/epel/epel-release-latest-${VERSION_ID%%.*}.noarch.rpm" 2>/dev/null \
+        # RHEL requires an active subscription for CodeReady Builder (provides EPEL deps).
+        # Failure here is logged explicitly so operators know EPEL may not install.
+        subscription-manager repos \
+          --enable "codeready-builder-for-rhel-${VERSION_ID%%.*}-$(uname -m)-rpms" 2>/dev/null \
+          || echo "Warning: subscription-manager failed on RHEL — RHEL subscription may be required for EPEL."
+        dnf install -y \
+          "https://dl.fedoraproject.org/pub/epel/epel-release-latest-${VERSION_ID%%.*}.noarch.rpm" \
+          2>/dev/null \
           || dnf install -y epel-release 2>/dev/null \
-          || echo "Warning: EPEL install failed on RHEL; fail2ban may not install"
+          || echo "Warning: EPEL install failed on RHEL; fail2ban will not be installed."
         ;;
       *)
-        dnf install -y epel-release || echo "Warning: EPEL install failed; fail2ban may not install"
+        dnf install -y epel-release \
+          || echo "Warning: EPEL install failed; fail2ban will not be installed."
         ;;
     esac
 

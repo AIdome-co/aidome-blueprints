@@ -11,9 +11,23 @@ terraform {
 
 locals {
   # Map os_type to OS family — drives cloud-init template selection.
-  # Debian family (APT-based): Ubuntu 22.04, 24.04, Debian 12 → cloud-init-deb.yaml
-  # RHEL family (DNF-based):   CentOS 9, RHEL 9/10, AlmaLinux 9, Oracle 9, Rocky 9 → cloud-init-rhel.yaml
-  os_family = contains(["ubuntu-2404", "ubuntu-2204", "debian-12"], var.os_type) ? "deb" : "rhel"
+  # Debian family (APT-based): ubuntu-2404, ubuntu-2204, debian-12 → cloud-init-deb.yaml
+  # RHEL family (DNF-based):   centos-9, rhel-9, rhel-10, almalinux-9, oracle-9, rocky-9 → cloud-init-rhel.yaml
+  #
+  # NOTE: When adding a new os_type to variables.tf, update this map too.
+  os_family_map = {
+    "ubuntu-2404" = "deb"
+    "ubuntu-2204" = "deb"
+    "debian-12"   = "deb"
+    "centos-9"    = "rhel"
+    "rhel-9"      = "rhel"
+    "rhel-10"     = "rhel"
+    "almalinux-9" = "rhel"
+    "oracle-9"    = "rhel"
+    "rocky-9"     = "rhel"
+  }
+
+  os_family = local.os_family_map[var.os_type]
 
   default_cloud_init_path            = "${path.module}/../scripts/cloud-init-${local.os_family}.yaml"
   effective_cloud_init_template_path = coalesce(var.cloud_init_template_path, local.default_cloud_init_path)
