@@ -8,6 +8,24 @@
 
 ---
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Tested Platforms](#tested-platforms)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+  - [Option A — Terraform](#option-a--terraform)
+  - [Option B — CloudFormation](#option-b--cloudformation)
+- [Shared Cloud-Init Scripts](#shared-cloud-init-scripts)
+- [Security & Hardening](#security--hardening)
+- [Verify the Installation](#verify-the-installation)
+- [Troubleshooting](#troubleshooting)
+- [Rollback](#rollback)
+- [Repository Structure](#repository-structure)
+- [Further Reading](#further-reading)
+
+---
+
 ## Overview
 
 Blueprint 01 deploys a production-ready, single-node EC2 instance for AIdome customer onboarding.
