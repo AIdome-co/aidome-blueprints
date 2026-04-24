@@ -41,7 +41,8 @@ jobs:
         run: |
           yamllint -c .yamllint.yml \
             blueprints/01-aws-ec2/scripts/cloud-init-deb.yaml \
-            blueprints/01-aws-ec2/scripts/cloud-init-rhel.yaml
+            blueprints/01-aws-ec2/scripts/cloud-init-rhel.yaml \
+            blueprints/01-aws-ec2/scripts/cloud-init.yaml
 
   # --------------------------------------------------------------------------
   # 2. cloud-init schema validation
@@ -66,6 +67,11 @@ jobs:
         run: >-
           cloud-init schema
           --config-file blueprints/01-aws-ec2/scripts/cloud-init-rhel.yaml
+
+      - name: Validate schema — generic
+        run: >-
+          cloud-init schema
+          --config-file blueprints/01-aws-ec2/scripts/cloud-init.yaml
 
   # --------------------------------------------------------------------------
   # 3. Terraform fmt + init + validate
