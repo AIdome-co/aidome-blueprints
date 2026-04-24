@@ -5,7 +5,7 @@ description: 'CloudFormation conventions for aidome-blueprints — covering temp
 
 # CloudFormation Conventions (aidome-blueprints)
 
-CloudFormation is used in `blueprints/02-aws-ec2/cloudformation/` to give customers a click-to-deploy alternative to Terraform. These guidelines keep the two paths behaviourally equivalent and auditable.
+CloudFormation is used in `blueprints/01-aws-ec2/cloudformation/` to give customers a click-to-deploy alternative to Terraform. These guidelines keep the two paths behaviourally equivalent and auditable.
 
 ## Template Structure
 
@@ -32,7 +32,7 @@ Keep templates under ~1000 lines; split into nested stacks (`AWS::CloudFormation
 ## Resource Naming
 
 - **Logical IDs**: PascalCase, descriptive, no environment suffix (e.g., `AidomeInstance`, not `AidomeInstanceProd`).
-- **`Tags`**: every taggable resource gets `Name`, `Project: AIdome`, `Blueprint: 02-aws-ec2`, `ManagedBy: CloudFormation`.
+- **`Tags`**: every taggable resource gets `Name`, `Project: AIdome`, `Blueprint: 01-aws-ec2`, `ManagedBy: CloudFormation`.
 - **Physical names**: avoid setting them unless required (let CloudFormation generate) to allow safe `Replace` updates.
 
 ## Security
@@ -60,17 +60,17 @@ Keep templates under ~1000 lines; split into nested stacks (`AWS::CloudFormation
 Run locally before committing:
 
 ```bash
-cfn-lint blueprints/02-aws-ec2/cloudformation/*.yaml
+cfn-lint blueprints/01-aws-ec2/cloudformation/*.yaml
 aws cloudformation validate-template \
-  --template-body file://blueprints/02-aws-ec2/cloudformation/ec2-private.yaml
+  --template-body file://blueprints/01-aws-ec2/cloudformation/ec2-private.yaml
 ```
 
 For security posture:
 
 ```bash
-cfn_nag_scan --input-path blueprints/02-aws-ec2/cloudformation/
+cfn_nag_scan --input-path blueprints/01-aws-ec2/cloudformation/
 # or
-checkov -d blueprints/02-aws-ec2/cloudformation/ --framework cloudformation
+checkov -d blueprints/01-aws-ec2/cloudformation/ --framework cloudformation
 ```
 
 ## Review Checklist

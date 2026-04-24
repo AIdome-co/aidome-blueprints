@@ -1,10 +1,10 @@
-# Blueprint 02 AWS EC2 Follow-up Plan
+# Blueprint 01 AWS EC2 Follow-up Plan
 
-This file tracks the remaining gaps from the post-merge audit of PR #2 against the current `blueprints/02-aws-ec2` implementation.
+This file tracks the remaining gaps from the post-merge audit of PR #2 against the current `blueprints/01-aws-ec2` implementation.
 
 ## Done in PR #2
 
-- [x] Added customer-facing `blueprints/02-aws-ec2/` blueprint with Terraform, CloudFormation, cloud-init, and README.
+- [x] Added customer-facing `blueprints/01-aws-ec2/` blueprint with Terraform, CloudFormation, cloud-init, and README.
 - [x] Renumbered later blueprints so AWS EC2 is blueprint 02.
 - [x] Restored and updated the root `README.md`.
 - [x] Switched Docker installation to the official APT repository flow (GPG-verified).

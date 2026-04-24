@@ -1,4 +1,4 @@
-# Blueprint 02 · AWS EC2
+# Blueprint 01 · AWS EC2
 
 > Customer-facing EC2 blueprint. Provisions a hardened, private-subnet EC2 instance
 > bootstrapped via cloud-init. Once up, the customer runs `aidome.sh` to install AIDome.
@@ -194,7 +194,7 @@ aws ec2 describe-images --owners 792107900699 \
 
 ```hcl
 module "aidome_ec2" {
-  source = "./blueprints/02-aws-ec2/terraform"
+  source = "./blueprints/01-aws-ec2/terraform"
 
   vpc_id            = "vpc-xxxxxxxx"
   private_subnet_id = "subnet-xxxxxxxx"
@@ -230,7 +230,7 @@ Deploy `cloudformation/ec2-private.yaml` via AWS Console, CLI, or CI/CD:
 
 ```bash
 aws cloudformation deploy \
-  --template-file blueprints/02-aws-ec2/cloudformation/ec2-private.yaml \
+  --template-file blueprints/01-aws-ec2/cloudformation/ec2-private.yaml \
   --stack-name aidome-ec2 \
   --parameter-overrides \
       VpcId=vpc-xxxxxxxx \
