@@ -10,10 +10,9 @@
 | # | Blueprint | Status | Complexity | Cloud | HA | Use-case |
 |---|-----------|--------|-----------|-------|----|----------|
 | 01 | [Quickstart – Local](blueprints/01-quickstart-local/README.md) | 📬 Docs pending — contact us | ⭐ Beginner | None (laptop) | ❌ | Evaluation / development |
-| 02 | [AWS EC2 – Bring Your Own VPC](blueprints/02-aws-ec2/README.md) | ✅ Available | ⭐⭐ Intermediate | AWS | ❌ | Harden and prepare an EC2 instance in your existing VPC for AIdome installation |
-| 03 | [Single-Node – AWS Greenfield](blueprints/03-single-node-aws/README.md) | 📬 Docs pending — contact us | ⭐⭐ Intermediate | AWS | ❌ | Full AWS infrastructure from scratch (VPC, subnets, NAT, EC2) — for customers with no existing AWS footprint |
-| 04 | [HA Kubernetes](blueprints/04-ha-kubernetes/README.md) | 📬 Docs pending — contact us | ⭐⭐⭐ Advanced | AWS / GCP / Azure | ✅ | Production workloads requiring high availability and horizontal scale |
-| 05 | [Air-Gapped](blueprints/05-air-gapped/README.md) | 📬 Docs pending — contact us | ⭐⭐⭐⭐ Expert | On-prem / private cloud | ✅ | Regulated / offline environments with no internet access |
+| 02 | [AWS EC2 – Single Node](blueprints/02-aws-ec2/README.md) | ✅ Available | ⭐⭐ Intermediate | AWS | ❌ | Single hardened EC2 instance — bring your own VPC |
+| 03 | [HA Kubernetes](blueprints/03-ha-kubernetes/README.md) | 📬 Docs pending — contact us | ⭐⭐⭐ Advanced | AWS / GCP / Azure | ✅ | Production workloads requiring high availability and horizontal scale |
+| 04 | [Air-Gapped](blueprints/04-air-gapped/README.md) | 📬 Docs pending — contact us | ⭐⭐⭐⭐ Expert | On-prem / private cloud | ✅ | Regulated / offline environments with no internet access |
 
 ---
 
@@ -37,16 +36,12 @@ aidome-blueprints/
 │   │   ├── cloudformation/
 │   │   ├── scripts/
 │   │   └── terraform/
-│   ├── 03-single-node-aws/
-│   │   ├── README.md
-│   │   ├── architecture.png
-│   │   └── terraform/
-│   ├── 04-ha-kubernetes/
+│   ├── 03-ha-kubernetes/
 │   │   ├── README.md
 │   │   ├── architecture.png
 │   │   ├── terraform/
 │   │   └── helm/
-│   └── 05-air-gapped/
+│   └── 04-air-gapped/
 │       ├── README.md
 │       └── ansible/
 ├── shared/
@@ -88,17 +83,15 @@ No cloud account required—ideal for first-time evaluation and local developmen
 
 ---
 
-### 02 · AWS EC2 – Bring Your Own VPC
+### 02 · AWS EC2 – Single Node
 
 **File:** [`blueprints/02-aws-ec2/README.md`](blueprints/02-aws-ec2/README.md)
 
-Provision a hardened, private-subnet EC2 instance inside your **existing** AWS VPC.
+Provision a hardened, private-subnet EC2 instance on AWS.
 Cloud-init bootstraps SSH hardening, iptables, fail2ban, Docker Engine, the AWS SSM Agent,
 and a dedicated operator user on first boot. Once the instance is ready, the AIdome team
 provides credentials and the `aidome.sh` installer to complete the product installation.
-
-> **Use this blueprint when** your customer or your organisation already has an AWS VPC,
-> subnets, and routing in place and just needs a correctly hardened host.
+Requires an existing AWS VPC and private subnet (Bring Your Own VPC).
 
 **Key files:**
 - [`terraform/`](blueprints/02-aws-ec2/terraform/)
@@ -107,25 +100,9 @@ provides credentials and the `aidome.sh` installer to complete the product insta
 
 ---
 
-### 03 · Single-Node – AWS Greenfield
+### 03 · HA Kubernetes
 
-**File:** [`blueprints/03-single-node-aws/README.md`](blueprints/03-single-node-aws/README.md)
-
-> 📬 **Self-service docs not yet published.** This deployment is fully supported today — contact your AIdome account team.
-
-Provisions a complete AWS environment from scratch — VPC, private subnets, route tables,
-NAT Gateway, and a hardened EC2 instance — using a single Terraform root module. Designed
-for customers with no existing AWS footprint who want AIdome running on a single node
-without manual networking setup.
-
-As with Blueprint 02, product installation requires AIdome-provided credentials and the
-`aidome.sh` installer; the images registry (`images.aidome.co`) is access-controlled.
-
----
-
-### 04 · HA Kubernetes
-
-**File:** [`blueprints/04-ha-kubernetes/README.md`](blueprints/04-ha-kubernetes/README.md)
+**File:** [`blueprints/03-ha-kubernetes/README.md`](blueprints/03-ha-kubernetes/README.md)
 
 > 📬 **Self-service docs not yet published.** This deployment is fully supported today — contact your AIdome account team.
 
@@ -136,9 +113,9 @@ upgrades.
 
 ---
 
-### 05 · Air-Gapped
+### 04 · Air-Gapped
 
-**File:** [`blueprints/05-air-gapped/README.md`](blueprints/05-air-gapped/README.md)
+**File:** [`blueprints/04-air-gapped/README.md`](blueprints/04-air-gapped/README.md)
 
 > 📬 **Self-service docs not yet published.** This deployment is fully supported today — contact [support@aidome.co](mailto:support@aidome.co) to discuss requirements.
 

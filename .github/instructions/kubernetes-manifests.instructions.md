@@ -1,12 +1,12 @@
 ---
-applyTo: 'blueprints/04-ha-kubernetes/helm/**/templates/**/*.yaml, blueprints/04-ha-kubernetes/helm/**/templates/**/*.yml, k8s/**/*.yaml, k8s/**/*.yml, manifests/**/*.yaml, manifests/**/*.yml'
+applyTo: 'blueprints/03-ha-kubernetes/helm/**/templates/**/*.yaml, blueprints/03-ha-kubernetes/helm/**/templates/**/*.yml, k8s/**/*.yaml, k8s/**/*.yml, manifests/**/*.yaml, manifests/**/*.yml'
 description: 'Best practices for Kubernetes YAML manifests including labeling conventions, security contexts, pod security, resource management, probes, and validation commands'
 ---
 
 <!--
 Source: https://github.com/github/awesome-copilot/blob/main/instructions/kubernetes-manifests.instructions.md
 License: MIT (github/awesome-copilot)
-applyTo scoped to blueprint 04 (HA Kubernetes) Helm templates.
+applyTo scoped to blueprint 03 (HA Kubernetes) Helm templates.
 -->
 
 # Kubernetes Manifests Instructions
