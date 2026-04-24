@@ -72,7 +72,7 @@ aidome-blueprints/
 Provision a hardened, private-subnet EC2 instance on AWS.
 Cloud-init bootstraps SSH hardening, iptables, fail2ban, Docker Engine, the AWS SSM Agent,
 and a dedicated operator user on first boot. Once the instance is ready, the AIdome team
-provides credentials and the `aidome.sh` installer to complete the product installation.
+provides credentials and the `aidome.sh` product installer (provided directly by AIdome — contact the AIdome team after prerequisites are complete to receive it) installer to complete the product installation.
 Requires an existing AWS VPC and private subnet (Bring Your Own VPC).
 
 **Key files:**

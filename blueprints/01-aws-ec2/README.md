@@ -1,4 +1,4 @@
-# Blueprint 01: AWS EC2 — Single Node
+# Blueprint 01: AWS EC2 – Single-Node Prerequisites — Single Node
 
 > **Scope — Infrastructure Prerequisites Only**
 > This blueprint sets up the EC2 server environment: OS hardening, Docker Engine, firewall rules,
@@ -302,6 +302,18 @@ SSH is restricted to `AllowUsers aidome-ops`. Connect as `aidome-ops` with the k
 specified at deploy time.
 
 ---
+
+## Getting the AIdome Installer
+
+This repository covers **server prerequisites only**. The `aidome.sh` product installer is owned and distributed by AIdome — it is **not** part of this repository.
+
+Once the server environment is provisioned and passes the readiness check, your technical team should:
+
+1. Contact AIdome to request the `aidome.sh` installer.
+2. Follow the AIdome onboarding instructions provided by the AIdome team.
+3. Run the installer on the prepared server to complete the product deployment.
+
+> **Note:** Do not attempt to self-source or substitute the `aidome.sh` script. The AIdome team will provide the correct, signed version for your environment.
 
 ## Rollback
 
