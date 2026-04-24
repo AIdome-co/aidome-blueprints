@@ -105,3 +105,17 @@ tags = {
   Project     = "aidome"
   ManagedBy   = "terraform"
 }
+
+# cloud-init delivery mode
+# "github" (default) — instance fetches the cloud-init YAML from the public GitHub repository
+#   at first boot using cloud-init's #include directive. No local file is embedded in user data,
+#   so the 16 KB EC2 limit is not a concern.
+# "local" — the cloud-init YAML is read from disk, gzip-compressed, and embedded in user data.
+#   Use for air-gapped environments or when supplying a custom cloud_init_template_path.
+# cloud_init_delivery = "github"
+
+# Git ref used when cloud_init_delivery = "github".
+# Pin to a release tag or commit SHA in production for reproducible deployments:
+#   github_ref = "v1.2.0"   # or a commit SHA such as "abc1234"
+# Defaults to "main" when not set.
+# github_ref = "main"

@@ -93,10 +93,21 @@ Parameters:
     Type: String
     Default: ''
     Description: >
-      Optional cloud-init content as a full string payload (base64-encoded by the template).
-      Use scripts/cloud-init-deb.yaml for Debian-family OS types and
+      Override: inline cloud-init content as a full string payload (base64-encoded by the template).
+      Use for air-gapped deployments where the instance cannot reach GitHub at boot time.
+      When this is empty (the default), the template generates a cloud-init #include directive
+      that fetches the appropriate cloud-init YAML from the public GitHub repository at the ref
+      specified by GitRef. Use scripts/cloud-init-deb.yaml for Debian-family OS types and
       scripts/cloud-init-rhel.yaml for RHEL-family OS types.
     NoEcho: true
+
+  GitRef:
+    Type: String
+    Default: main
+    Description: >
+      Git ref (branch, tag, or commit SHA) used to build the GitHub raw URL when
+      CloudInitUserData is empty. Pin to a release tag (e.g. v1.2.0) or commit SHA
+      in production to prevent unexpected changes at the next instance launch.
 
 # Root block device name varies by AMI family.
 # Ubuntu 22.04/24.04 and most RHEL-family AMIs use /dev/sda1.
@@ -128,6 +139,28 @@ Mappings:
       DeviceName: /dev/sda1
     rocky-9:
       DeviceName: /dev/sda1
+
+  # Maps each OsType to its cloud-init script filename.
+  # Used to auto-construct the GitHub raw URL when CloudInitUserData is empty.
+  OsFamily:
+    ubuntu-2404:
+      CloudInitScript: cloud-init-deb.yaml
+    ubuntu-2204:
+      CloudInitScript: cloud-init-deb.yaml
+    debian-12:
+      CloudInitScript: cloud-init-deb.yaml
+    centos-9:
+      CloudInitScript: cloud-init-rhel.yaml
+    rhel-9:
+      CloudInitScript: cloud-init-rhel.yaml
+    rhel-10:
+      CloudInitScript: cloud-init-rhel.yaml
+    almalinux-9:
+      CloudInitScript: cloud-init-rhel.yaml
+    oracle-9:
+      CloudInitScript: cloud-init-rhel.yaml
+    rocky-9:
+      CloudInitScript: cloud-init-rhel.yaml
 
 Conditions:
   HasKeyName: !Not [!Equals [!Ref KeyName, '']]
@@ -187,7 +220,10 @@ Resources:
       UserData: !If
         - HasCloudInitUserData
         - Fn::Base64: !Ref CloudInitUserData
-        - !Ref 'AWS::NoValue'
+        - Fn::Base64:
+            Fn::Sub:
+              - "#include\nhttps://raw.githubusercontent.com/AIdome-co/aidome-blueprints/${GitRef}/blueprints/01-aws-ec2/scripts/${CloudInitScript}\n"
+              - CloudInitScript: !FindInMap [OsFamily, !Ref OsType, CloudInitScript]
       BlockDeviceMappings:
         - DeviceName: !FindInMap [OsRootDevice, !Ref OsType, DeviceName]
           Ebs:

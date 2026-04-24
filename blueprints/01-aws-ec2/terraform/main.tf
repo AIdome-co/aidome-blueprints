@@ -29,9 +29,31 @@ locals {
 
   os_family = local.os_family_map[var.os_type]
 
+  # ── Local delivery ─────────────────────────────────────────────────────────
+  # Used only when cloud_init_delivery = "local".
+  # The file is gzip-compressed at plan time so it stays under the 16 KB EC2
+  # user-data limit even for the larger Debian/RHEL scripts (> 22 KB raw).
   default_cloud_init_path            = "${path.module}/../scripts/cloud-init-${local.os_family}.yaml"
   effective_cloud_init_template_path = coalesce(var.cloud_init_template_path, local.default_cloud_init_path)
-  cloud_init_user_data               = fileexists(local.effective_cloud_init_template_path) ? file(local.effective_cloud_init_template_path) : null
+  cloud_init_file_exists             = var.cloud_init_delivery == "local" && fileexists(local.effective_cloud_init_template_path)
+  cloud_init_user_data               = local.cloud_init_file_exists ? file(local.effective_cloud_init_template_path) : null
+
+  # ── GitHub delivery ────────────────────────────────────────────────────────
+  # Used when cloud_init_delivery = "github" (default).
+  # cloud-init's #include directive fetches and processes the referenced URL at
+  # first boot — the user-data payload is only ~100 bytes.
+  # Pin github_ref to a release tag or commit SHA in production to prevent
+  # unexpected changes at the next instance launch.
+  github_cloud_init_url = "https://raw.githubusercontent.com/AIdome-co/aidome-blueprints/${var.github_ref}/blueprints/01-aws-ec2/scripts/cloud-init-${local.os_family}.yaml"
+  github_include_payload = "#include\n${local.github_cloud_init_url}\n"
+
+  # ── Effective user-data (base64-encoded) ───────────────────────────────────
+  # Always expressed as user_data_base64 to support both delivery paths:
+  #   github → base64-encode of the tiny #include string
+  #   local  → base64gzip of the full YAML (cloud-init transparently decompresses)
+  effective_user_data_base64 = var.cloud_init_delivery == "github" ? base64encode(local.github_include_payload) : (
+    local.cloud_init_user_data != null ? base64gzip(local.cloud_init_user_data) : null
+  )
 }
 
 resource "aws_security_group" "vm_private_sg" {
@@ -75,7 +97,7 @@ resource "aws_instance" "vm_instance" {
   iam_instance_profile        = var.iam_instance_profile_name
   key_name                    = var.key_name
   associate_public_ip_address = false
-  user_data                   = local.cloud_init_user_data
+  user_data_base64            = local.effective_user_data_base64
 
   root_block_device {
     volume_size = var.root_volume_size
@@ -93,7 +115,7 @@ resource "aws_instance" "vm_instance" {
 
   lifecycle {
     precondition {
-      condition     = local.cloud_init_user_data != null
+      condition     = var.cloud_init_delivery != "local" || local.cloud_init_user_data != null
       error_message = "cloud-init template file not found: ${local.effective_cloud_init_template_path}"
     }
   }

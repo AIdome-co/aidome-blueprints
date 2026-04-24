@@ -88,8 +88,41 @@ variable "tags" {
   default     = {}
 }
 
+variable "cloud_init_delivery" {
+  description = <<-EOT
+    Controls how the cloud-init configuration is delivered to the EC2 instance.
+
+    "github" (default) — The instance downloads the cloud-init YAML at first boot using
+    cloud-init's native #include directive. The file is fetched from the public GitHub
+    repository at the ref specified by `github_ref`. This keeps user data well under the
+    16 KB EC2 limit and ensures the script is always sourced from version control.
+
+    "local" — The cloud-init YAML is read from disk at plan/apply time, gzip-compressed,
+    and base64-encoded before being embedded in user data. Use this for air-gapped
+    deployments or when a custom `cloud_init_template_path` is required.
+  EOT
+  type        = string
+  default     = "github"
+
+  validation {
+    condition     = contains(["github", "local"], var.cloud_init_delivery)
+    error_message = "cloud_init_delivery must be either \"github\" or \"local\"."
+  }
+}
+
+variable "github_ref" {
+  description = <<-EOT
+    Git ref (branch, tag, or commit SHA) used when cloud_init_delivery = "github".
+    Pin to a specific release tag (e.g. "v1.2.0") or commit SHA in production to
+    prevent unexpected changes at the next instance launch.
+    Has no effect when cloud_init_delivery = "local".
+  EOT
+  type        = string
+  default     = "main"
+}
+
 variable "cloud_init_template_path" {
-  description = "Path to the cloud-init template consumed by this module (defaults to scripts/cloud-init.yaml)"
+  description = "Path to the cloud-init template consumed by this module when cloud_init_delivery = \"local\" (defaults to scripts/cloud-init-<os_family>.yaml)"
   type        = string
   default     = null
 }

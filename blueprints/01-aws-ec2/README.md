@@ -197,7 +197,7 @@ aws cloudformation describe-stacks \
 
 ## Shared Cloud-Init Scripts
 
-Both deployment options pass a cloud-init script to the EC2 instance's `UserData` at launch.
+Both deployment options deliver a cloud-init script to the EC2 instance's `UserData` at launch.
 There are exactly **two scripts** — one per OS family:
 
 ```
@@ -206,12 +206,28 @@ scripts/
 └── cloud-init-rhel.yaml   # RHEL 9, AlmaLinux 9
 ```
 
-**How each method picks the right script:**
+> **EC2 user data size limit** — Amazon EC2 enforces a hard 16 KB raw limit on user data.
+> Both cloud-init scripts exceed this limit (> 22 KB).  The default delivery mode avoids
+> it by passing only a tiny [`#include`](https://cloudinit.readthedocs.io/en/latest/reference/datasources/ec2.html) directive;
+> the instance fetches the full YAML from GitHub at first boot.
 
-- **Terraform** — the `os_family` variable (`"deb"` or `"rhel"`) controls which script file is
-  passed as `user_data`.
-- **CloudFormation** — the `OsFamily` parameter (`"deb"` or `"rhel"`) controls which script is
-  embedded in `UserData`.
+### User-data delivery modes
+
+| Mode | How it works | When to use |
+|------|-------------|-------------|
+| **`github`** (default) | User data contains a small `#include` line. Cloud-init fetches the YAML from `raw.githubusercontent.com` at first boot. | Normal deployments where the instance has outbound internet access (via NAT gateway). |
+| **`local`** | The YAML is read from disk at plan/apply time, gzip-compressed, and embedded in user data. | Air-gapped environments or when using a custom `cloud_init_template_path`. |
+
+**Terraform** — controlled by the `cloud_init_delivery` variable (default `"github"`).
+Pin the fetched version using `github_ref` (default `"main"`):
+
+```hcl
+# Production: pin to a specific release tag or commit SHA
+github_ref = "v1.2.0"
+```
+
+**CloudFormation** — uses `#include` by default (GitRef parameter, default `"main"`).
+Pass a full script string in `CloudInitUserData` to override (inline / air-gapped mode).
 
 **What cloud-init does on first boot (both scripts):**
 
@@ -512,6 +528,10 @@ module "aidome_ec2" {
   # Optional: customer-managed KMS key for the EBS root volume
   # kms_key_id = "arn:aws:kms:us-east-1:123456789012:key/mrk-xxxxxxxx"
 
+  # cloud-init delivery (default "github") — see "Shared Cloud-Init Scripts" section above
+  # Pin to a release tag or commit SHA in production:
+  # github_ref = "v1.2.0"
+
   tags = {
     Environment = "dev"
     Project     = "aidome"
@@ -538,8 +558,15 @@ aws cloudformation deploy \
   --capabilities CAPABILITY_NAMED_IAM
 ```
 
-Pass cloud-init content via the `CloudInitUserData` parameter (base64-encoded by the template).
-Use `scripts/cloud-init-deb.yaml` for Debian-family OS types (`ubuntu-*`, `debian-12`) and
+By default the template generates a `#include` user-data directive that fetches the appropriate
+cloud-init YAML from GitHub at first boot. Use the `GitRef` parameter to pin the version:
+
+```bash
+  --parameter-overrides ... GitRef=v1.2.0
+```
+
+For air-gapped deployments, pass the full cloud-init content via `CloudInitUserData` (the template
+base64-encodes it). Use `scripts/cloud-init-deb.yaml` for Debian-family OS types (`ubuntu-*`, `debian-12`) and
 `scripts/cloud-init-rhel.yaml` for RHEL-family types (`centos-9`, `rhel-*`, `almalinux-9`, `oracle-9`, `rocky-9`).
 
 ---
