@@ -428,17 +428,17 @@ runcmd:
   - 'echo "Kernel: $(uname -r)"'
 
   # Install Docker Engine via official repository (GPG-verified — no pipe-to-shell)
-  # Auto-detects distribution: centos uses the CentOS repo; all other RHEL-compatible
-  # distros (rhel, almalinux, ol, rocky) use the RHEL repo.
+  # Auto-detects distribution: RHEL uses the RHEL repo; CentOS, AlmaLinux, Rocky,
+  # and Oracle Linux use the CentOS repo (per Docker official docs for v9 distros).
   - 'echo "Installing Docker Engine via official repository..."'
   - |
     . /etc/os-release
     case "${ID}" in
-      centos)
-        DOCKER_REPO="https://download.docker.com/linux/centos/docker-ce.repo"
+      rhel)
+        DOCKER_REPO="https://download.docker.com/linux/rhel/docker-ce.repo"
         ;;
       *)
-        DOCKER_REPO="https://download.docker.com/linux/rhel/docker-ce.repo"
+        DOCKER_REPO="https://download.docker.com/linux/centos/docker-ce.repo"
         ;;
     esac
     dnf config-manager --add-repo "${DOCKER_REPO}" \
@@ -458,7 +458,7 @@ runcmd:
   - |
     dnf install -y amazon-ssm-agent 2>/dev/null \
       || rpm -Uvh \
-           "https://s3.amazonaws.com/amazon-ssm-agent/latest/linux_amd64/amazon-ssm-agent.rpm" \
+           "https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm" \
            2>/dev/null \
       || echo "Warning: SSM agent install failed; install manually if SSM access is required"
     systemctl enable --now amazon-ssm-agent 2>/dev/null || true

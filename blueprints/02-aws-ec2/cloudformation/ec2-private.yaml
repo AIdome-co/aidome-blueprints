@@ -101,7 +101,8 @@ Parameters:
 # Root block device name varies by AMI family.
 # Ubuntu 22.04/24.04 and most RHEL-family AMIs use /dev/sda1.
 # Debian 12 official AMIs use /dev/xvda.
-# Verify the exact device name for your chosen AMI with:
+# NOTE: Some newer Nitro-based AMIs (especially RHEL-family) may use /dev/xvda
+# instead of /dev/sda1. Always verify for your chosen AMI with:
 #   aws ec2 describe-images --image-ids <ami-id> \
 #     --query 'Images[0].BlockDeviceMappings[*].DeviceName' --output text
 #
