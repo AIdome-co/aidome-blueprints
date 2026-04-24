@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: AIDome dev EC2 instance in a private subnet
+Description: AIDome EC2 instance in a private subnet — customer onboarding blueprint
 
 Parameters:
   NamePrefix:

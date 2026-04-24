@@ -119,11 +119,11 @@ module "aidome_ec2" {
 
 ### CloudFormation
 
-Deploy `cloudformation/ec2-dev.yaml` via AWS Console, CLI, or CI/CD:
+Deploy `cloudformation/ec2-private.yaml` via AWS Console, CLI, or CI/CD:
 
 ```bash
 aws cloudformation deploy \
-  --template-file blueprints/05-aws-ec2/cloudformation/ec2-dev.yaml \
+  --template-file blueprints/05-aws-ec2/cloudformation/ec2-private.yaml \
   --stack-name aidome-ec2 \
   --parameter-overrides \
       VpcId=vpc-xxxxxxxx \
