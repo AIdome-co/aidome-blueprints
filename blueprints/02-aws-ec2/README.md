@@ -163,11 +163,14 @@ cat /var/log/cloud-init-output.log | tail -n 20   # optional sanity check
 
 # Install AIDome
 curl -fsSL https://your-bucket/aidome.sh | sudo bash
+```
 
-# Alternative (recommended for stricter environments — download, inspect, then run):
-#   curl -fsSLO https://your-bucket/aidome.sh
-#   less aidome.sh
-#   sudo bash aidome.sh
+For stricter environments, download, inspect, and then run:
+
+```bash
+curl -fsSLO https://your-bucket/aidome.sh
+less aidome.sh
+sudo bash aidome.sh
 ```
 
 ---
