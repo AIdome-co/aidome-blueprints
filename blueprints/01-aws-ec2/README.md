@@ -31,7 +31,7 @@
 
 Blueprint 01 deploys a production-ready, single-node EC2 instance for AIdome customer onboarding.
 All security hardening and software installation happens automatically at first boot via
-**cloud-init** — no manual post-launch steps required.
+**cloud-init**.
 
 You have two equally supported deployment paths. **Both use the same cloud-init scripts** in
 `scripts/`:
