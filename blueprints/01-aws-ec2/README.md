@@ -4,7 +4,7 @@
 > This blueprint sets up the EC2 server environment: OS hardening, Docker Engine, firewall rules,
 > AWS SSM Agent, and the `aidome-ops` operator account. The AIdome product installer (`aidome.sh`),
 
-> application configuration, `.env` files, and container images are delivered separately by the
+> Application configuration, `.env` files, and container images are delivered separately by the
 > AIdome team.
 
 ---
@@ -104,6 +104,7 @@ Both cloud-init scripts are tested and supported on the following operating syst
 | **AlmaLinux** | 9 | `cloud-init-rhel.yaml` | `download.docker.com/linux/centos` ① |
 
 > ① AlmaLinux 9 uses the Docker CentOS repository. Docker does not publish an AlmaLinux-specific
+
 > repo, but the CentOS 9 Stream packages are fully compatible with AlmaLinux 9.
 
 ---
