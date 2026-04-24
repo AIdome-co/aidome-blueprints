@@ -311,7 +311,8 @@ write_files:
       -w /var/run/faillock -p wa -k logins
 
       # 4.1.5 — Privileged command usage (setuid/setgid binaries)
-      # Audit all executions of setuid/setgid programs on the root filesystem.
+      # arch=b64 covers 64-bit syscalls. For systems with 32-bit multilib support,
+      # add matching -a rules with arch=b32 for full coverage.
       -a always,exit -F arch=b64 -S execve -C uid!=euid -F euid=0 -k setuid
       -a always,exit -F arch=b64 -S execve -C gid!=egid -F egid=0 -k setgid
 
@@ -463,7 +464,7 @@ runcmd:
   # https://manpages.ubuntu.com/manpages/noble/en/man8/auditd.8.html
   - 'systemctl enable --now auditd || echo "Warning: auditd failed to start"'
   # Load audit rules from /etc/audit/rules.d/ (augenrules compiles all *.rules files)
-  - 'augenrules --load 2>/dev/null || auditctl -R /etc/audit/rules.d/99-aidome-cis.rules 2>/dev/null || echo "Warning: audit rules failed to load"'
+  - 'augenrules --load 2>/dev/null || auditctl -R /etc/audit/rules.d/99-aidome-cis.rules 2>/dev/null || echo "Warning: audit rules failed to load (both augenrules and auditctl failed); run: systemctl status auditd && auditctl -l"'
 
   # Display system information
   - 'cat /etc/os-release || true'
@@ -553,7 +554,7 @@ runcmd:
       && rm -rf /tmp/awscliv2.zip /tmp/awscliv2.zip.sig /tmp/aws/ \
       || echo "Warning: AWS CLI v2 install failed; install manually if required"
     aws --version || true
-  - 'netfilter-persistent reload || echo "Warning: netfilter-persistent reload failed"'
+  - 'netfilter-persistent reload || echo "Warning: netfilter-persistent reload failed; verify rules with: iptables -L -n"'
   - 'systemctl enable netfilter-persistent || true'
   - 'echo "Firewall rules loaded and persisted"'
 
