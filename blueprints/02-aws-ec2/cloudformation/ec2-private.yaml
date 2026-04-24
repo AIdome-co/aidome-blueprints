@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: AIDome EC2 instance in a private subnet — customer onboarding blueprint
+Description: AIDome EC2 instance in a private subnet — customer onboarding blueprint (Ubuntu 24.04 LTS)
 
 Parameters:
   NamePrefix:
@@ -17,7 +17,7 @@ Parameters:
 
   AmiId:
     Type: AWS::EC2::Image::Id
-    Description: AMI ID for the EC2 instance (Ubuntu 22.04 LTS recommended)
+    Description: AMI ID for the EC2 instance (Ubuntu 24.04 LTS recommended)
 
   InstanceType:
     Type: String
@@ -51,8 +51,13 @@ Parameters:
 
   RootDeviceName:
     Type: String
-    Default: /dev/xvda
-    Description: Root block device name for the selected AMI — verify for your AMI (Ubuntu 22.04 LTS typically uses /dev/sda1 or /dev/xvda)
+    Default: /dev/sda1
+    Description: Root block device name for the selected AMI — Ubuntu 24.04 LTS uses /dev/sda1; verify for your AMI
+
+  KmsKeyId:
+    Type: String
+    Default: ''
+    Description: Optional customer-managed KMS key ID or ARN for EBS encryption (uses the AWS managed key aws/ebs if empty)
 
   MetadataHopLimit:
     Type: Number
@@ -81,6 +86,7 @@ Conditions:
   HasAllowedSshCidr: !Not [!Equals [!Ref AllowedSshCidr, '']]
   HasCloudInitUserData: !Not [!Equals [!Ref CloudInitUserData, '']]
   HasAdditionalSg: !Not [!Equals [!Ref AdditionalSecurityGroupId, '']]
+  HasKmsKeyId: !Not [!Equals [!Ref KmsKeyId, '']]
 
 Resources:
   VmPrivateSecurityGroup:
@@ -139,6 +145,7 @@ Resources:
             VolumeSize: !Ref RootVolumeSize
             VolumeType: gp3
             Encrypted: true
+            KmsKeyId: !If [HasKmsKeyId, !Ref KmsKeyId, !Ref 'AWS::NoValue']
       MetadataOptions:
         HttpEndpoint: enabled
         # Require IMDSv2.

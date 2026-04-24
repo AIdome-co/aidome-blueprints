@@ -1,0 +1,35 @@
+# terraform.tfvars.example
+#
+# Copy this file to terraform.tfvars and fill in your values.
+# Never commit terraform.tfvars to version control — it may contain sensitive data.
+#
+# Required variables (no defaults — must be provided):
+vpc_id            = "vpc-xxxxxxxx"
+private_subnet_id = "subnet-xxxxxxxx"
+ami_id            = "ami-xxxxxxxx" # Ubuntu 24.04 LTS (Noble); find via: aws ec2 describe-images \
+                                   #   --filters 'Name=name,Values=ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*' \
+                                   #             'Name=owner-alias,Values=aws-marketplace' --query 'sort_by(Images,&CreationDate)[-1].ImageId'
+
+# Recommended: attach an IAM instance profile so SSM Session Manager works
+# (no bastion host or open SSH port needed — IAM-controlled + CloudTrail-logged)
+iam_instance_profile_name = "aidome-ssm-profile" # must have AmazonSSMManagedInstanceCore
+
+# Optional: allow SSH from a narrow internal CIDR (SSM is preferred)
+# allowed_ssh_cidr = "10.0.0.0/8"
+# key_name         = "my-key-pair"
+
+# Instance sizing — t3.small is the minimum for AIDome
+instance_type    = "t3.small"
+root_volume_size = 30 # GiB — increase if large model artefacts will be stored locally
+
+# Optional: customer-managed KMS key for EBS encryption
+# (omit to use the default AWS managed key aws/ebs)
+# kms_key_id = "arn:aws:kms:us-east-1:123456789012:key/mrk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Resource name prefix and tags
+name_prefix = "aidome-ec2"
+tags = {
+  Environment = "dev"
+  Project     = "aidome"
+  ManagedBy   = "terraform"
+}

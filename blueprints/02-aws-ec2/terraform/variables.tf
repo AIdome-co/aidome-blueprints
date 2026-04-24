@@ -15,7 +15,7 @@ variable "private_subnet_id" {
 }
 
 variable "ami_id" {
-  description = "AMI ID for the EC2 instance (Ubuntu 22.04 LTS recommended)"
+  description = "AMI ID for the EC2 instance (Ubuntu 24.04 LTS recommended)"
   type        = string
 }
 
@@ -69,6 +69,12 @@ variable "tags" {
 
 variable "cloud_init_template_path" {
   description = "Path to the cloud-init template consumed by this module (defaults to scripts/cloud-init.yaml)"
+  type        = string
+  default     = null
+}
+
+variable "kms_key_id" {
+  description = "Optional KMS key ID or ARN for EBS volume encryption (uses the AWS managed key aws/ebs if null)"
   type        = string
   default     = null
 }

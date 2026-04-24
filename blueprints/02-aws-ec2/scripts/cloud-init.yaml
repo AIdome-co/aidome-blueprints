@@ -17,8 +17,9 @@
 # - https://cloudinit.readthedocs.io/
 # - https://docs.docker.com/engine/install/ubuntu/
 # - https://docs.aws.amazon.com/systems-manager/latest/userguide/ssm-agent.html
+# - https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Install-CloudWatch-Agent.html
 #
-# Version: 1.1
+# Version: 1.2 (Ubuntu 24.04 LTS)
 # ==========================================
 
 preserve_hostname: false
@@ -69,7 +70,7 @@ write_files:
       PermitRootLogin no
       PasswordAuthentication no
       PubkeyAuthentication yes
-      ChallengeResponseAuthentication no
+      KbdInteractiveAuthentication no
       UsePAM yes
 
       # Security hardening
@@ -90,6 +91,9 @@ write_files:
       AllowAgentForwarding no
       GatewayPorts no
       PermitTunnel no
+
+      # CIS 5.2.18 — display /etc/issue.net before authentication
+      Banner /etc/issue.net
 
   # System banner for SSH connections
   - path: /etc/issue.net
@@ -128,6 +132,61 @@ write_files:
 
       Documentation: See /var/log/cloud-init.log
 
+  # CloudWatch Agent configuration — basic metrics + log shipping
+  # Requires IAM role with CloudWatchAgentServerPolicy attached to the instance.
+  - path: /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+    permissions: '0640'
+    owner: root:root
+    content: |
+      {
+        "agent": {
+          "metrics_collection_interval": 60,
+          "run_as_user": "cwagent"
+        },
+        "logs": {
+          "logs_collected": {
+            "files": {
+              "collect_list": [
+                {
+                  "file_path": "/var/log/cloud-init.log",
+                  "log_group_name": "/aidome-ec2/cloud-init",
+                  "log_stream_name": "{instance_id}"
+                },
+                {
+                  "file_path": "/var/log/syslog",
+                  "log_group_name": "/aidome-ec2/syslog",
+                  "log_stream_name": "{instance_id}"
+                },
+                {
+                  "file_path": "/var/log/auth.log",
+                  "log_group_name": "/aidome-ec2/auth",
+                  "log_stream_name": "{instance_id}"
+                }
+              ]
+            }
+          }
+        },
+        "metrics": {
+          "namespace": "AIDome/EC2",
+          "append_dimensions": {
+            "InstanceId": "${aws:InstanceId}"
+          },
+          "metrics_collected": {
+            "mem": {
+              "measurement": ["mem_used_percent"]
+            },
+            "disk": {
+              "measurement": ["disk_used_percent"],
+              "resources": ["/"]
+            },
+            "cpu": {
+              "totalcpu": true,
+              "measurement": ["cpu_usage_idle", "cpu_usage_user", "cpu_usage_system"]
+            }
+          }
+        }
+      }
+
   # Sysctl security hardening
   - path: /etc/sysctl.d/99-aidome-security.conf
     permissions: '0644'
@@ -153,11 +212,18 @@ write_files:
       net.ipv4.icmp_echo_ignore_broadcasts = 1
       net.ipv4.icmp_ignore_bogus_error_responses = 1
 
+      # Log martian packets (CIS 3.3.7)
+      net.ipv4.conf.all.log_martians = 1
+      net.ipv4.conf.default.log_martians = 1
+
       # IPv6 security
       net.ipv6.conf.all.accept_redirects = 0
       net.ipv6.conf.default.accept_redirects = 0
       net.ipv6.conf.all.accept_source_route = 0
       net.ipv6.conf.default.accept_source_route = 0
+      # Disable IPv6 router advertisements (CIS 3.3.10)
+      net.ipv6.conf.all.accept_ra = 0
+      net.ipv6.conf.default.accept_ra = 0
 
       # TCP hardening
       net.ipv4.tcp_syncookies = 1
@@ -205,6 +271,7 @@ write_files:
       :INPUT DROP [0:0]
       :FORWARD DROP [0:0]
       :OUTPUT ACCEPT [0:0]
+      :DOCKER-USER - [0:0]
 
       # Allow loopback and established/related
       -A INPUT -i lo -j ACCEPT
@@ -219,6 +286,15 @@ write_files:
       -A INPUT -s 10.0.0.0/8 -p tcp --dport 443 -j ACCEPT
       -A INPUT -s 172.16.0.0/12 -p tcp --dport 443 -j ACCEPT
       -A INPUT -s 192.168.0.0/16 -p tcp --dport 443 -j ACCEPT
+
+      # DOCKER-USER chain -- Docker forwards traffic through FORWARD, not INPUT.
+      # Rules here apply to container-published ports before Docker's own rules.
+      # Allow only established/related and RFC1918 sources to reach containers.
+      -A DOCKER-USER -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
+      -A DOCKER-USER -s 10.0.0.0/8 -j RETURN
+      -A DOCKER-USER -s 172.16.0.0/12 -j RETURN
+      -A DOCKER-USER -s 192.168.0.0/16 -j RETURN
+      -A DOCKER-USER -j DROP
 
       COMMIT
 
@@ -276,6 +352,10 @@ runcmd:
   # Apply sysctl
   - 'sysctl -p /etc/sysctl.d/99-aidome-security.conf || echo "Warning: sysctl failed"'
 
+  # Disable UFW — iptables-persistent manages the firewall directly;
+  # UFW conflicts with our rules.v4/rules.v6 if left enabled.
+  - 'systemctl disable ufw --now 2>/dev/null || true'
+
   # Create critical directories early
   - 'mkdir -p /etc/iptables || echo "Warning: Failed to create /etc/iptables directory"'
 
@@ -326,6 +406,24 @@ runcmd:
       || systemctl enable --now amazon-ssm-agent 2>/dev/null \
       || true
 
+  # Install CloudWatch Agent for metrics and log shipping
+  # The agent starts automatically; it only ships data if the IAM role has
+  # CloudWatchAgentServerPolicy attached to this instance.
+  - 'echo "Installing Amazon CloudWatch Agent..."'
+  - |
+    curl -fsSL \
+      "https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb" \
+      -o /tmp/amazon-cloudwatch-agent.deb \
+      && dpkg -i /tmp/amazon-cloudwatch-agent.deb \
+      && rm -f /tmp/amazon-cloudwatch-agent.deb \
+      || echo "Warning: CloudWatch Agent install failed; install manually if metrics/log shipping is required"
+    /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+      -a fetch-config \
+      -m ec2 \
+      -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json \
+      -s 2>/dev/null \
+      || echo "Warning: CloudWatch Agent failed to start (check IAM role has CloudWatchAgentServerPolicy)"
+
   # Load and persist firewall rules
   - 'netfilter-persistent reload || echo "Warning: netfilter-persistent reload failed"'
   - 'systemctl enable netfilter-persistent || true'
@@ -341,6 +439,7 @@ runcmd:
   - 'echo "Docker status: $(systemctl is-active docker || echo inactive)"'
   - 'echo "Fail2ban status: $(systemctl is-active fail2ban || echo inactive)"'
   - 'echo "Firewall status: $(systemctl is-active netfilter-persistent || echo inactive)"'
+  - 'echo "CWAgent status: $(systemctl is-active amazon-cloudwatch-agent || echo inactive)"'
   - 'echo "End time: $(date)"'
   - 'echo "### Cloud-init completed. Instance is ready."'
   - 'echo "### Connect via SSH or SSM Session Manager, then run the AIDome installer (obtain URL from your AIDome account or support team)."'
