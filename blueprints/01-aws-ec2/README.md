@@ -649,7 +649,8 @@ Use `scripts/cloud-init-deb.yaml` for Debian-family OS types (`ubuntu-*`, `debia
 
 ## Post-boot: install AIDome
 
-> **Note:** `aidome.sh` and the application container images are **not** part of this repository. This section is provided as context only. The AIdome team will supply the installer URL and credentials once the infrastructure is provisioned.
+> **Note:** `aidome.sh` and the application container images are **not** part of this repository.
+> This section is provided as context only. The AIdome team will supply the installer URL and credentials once the infrastructure is provisioned.
 
 Once the EC2 instance is up and cloud-init has completed (~5 min):
 
