@@ -101,7 +101,7 @@ Both cloud-init scripts are tested and supported on the following operating syst
 | **Ubuntu** | 24.04 LTS (Noble Numbat) | `cloud-init-deb.yaml` | `download.docker.com/linux/ubuntu` |
 | **Debian** | 12 (Bookworm) | `cloud-init-deb.yaml` | `download.docker.com/linux/debian` |
 | **RHEL** | 9 | `cloud-init-rhel.yaml` | `download.docker.com/linux/rhel` |
-| **AlmaLinux** | 9 | `cloud-init-rhel.yaml` | `download.docker.com/linux/centos` ① |
+| **AlmaLinux** | 9 | `cloud-init-rhel.yaml` | `download.docker.com/linux/centos` |
 
 > ① AlmaLinux 9 uses the Docker CentOS repository.
 > Docker does not publish an AlmaLinux-specific repo, but the CentOS 9 Stream packages are fully compatible with AlmaLinux 9.
