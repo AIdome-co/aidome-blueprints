@@ -286,7 +286,15 @@ blueprints/01-aws-ec2/
 - [Docker CE — RHEL](https://docs.docker.com/engine/install/rhel/)
 - [CIS Benchmarks](https://www.cisecurity.org/cis-benchmarks)
 
-<!-- AIdome-BP01-v2-end --> · AWS EC2
+<!-- AIdome-BP01-v2-end -->
+
+---
+
+> **⚠️ STALE CONTENT BELOW — DELETE EVERYTHING FROM THIS LINE TO THE END OF FILE BEFORE MERGING.**
+> The lines below are the pre-existing README content that was present before this rewrite.
+> They are retained here only because the automated edit tool cannot remove CRLF-encoded content.
+
+ · AWS EC2
 
 > **Scope — infrastructure prerequisites only.** This blueprint provisions the EC2 server environment via cloud-init: OS hardening, Docker Engine, iptables firewall, AWS SSM Agent, CloudWatch Agent, and a dedicated operator user. The AIdome product installer (`aidome.sh`), application configuration (`.env`), and container images are **not** part of this repository — they are delivered separately by the AIdome team once the infrastructure is ready.
 
