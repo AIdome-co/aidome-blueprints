@@ -103,9 +103,8 @@ Both cloud-init scripts are tested and supported on the following operating syst
 | **RHEL** | 9 | `cloud-init-rhel.yaml` | `download.docker.com/linux/rhel` |
 | **AlmaLinux** | 9 | `cloud-init-rhel.yaml` | `download.docker.com/linux/centos` ① |
 
-> ① AlmaLinux 9 uses the Docker CentOS repository. Docker does not publish an AlmaLinux-specific
-
-> repo, but the CentOS 9 Stream packages are fully compatible with AlmaLinux 9.
+> ① AlmaLinux 9 uses the Docker CentOS repository.
+> Docker does not publish an AlmaLinux-specific repo, but the CentOS 9 Stream packages are fully compatible with AlmaLinux 9.
 
 ---
 
@@ -335,8 +334,8 @@ aws cloudformation delete-stack --stack-name aidome-ec2
 aws cloudformation wait stack-delete-complete --stack-name aidome-ec2
 ```
 
-> ⚠️ Instance termination is irreversible. Create an AMI snapshot first if you need to preserve
-> the configured state.
+> ⚠️ Instance termination is irreversible.
+> Create an AMI snapshot first if you need to preserve the configured state.
 
 ---
 
@@ -375,7 +374,9 @@ the automated edit tooling. Delete everything from this comment to the end of fi
 
  · AWS EC2
 
-> **Scope — infrastructure prerequisites only.** This blueprint provisions the EC2 server environment via cloud-init: OS hardening, Docker Engine, iptables firewall, AWS SSM Agent, CloudWatch Agent, and a dedicated operator user. The AIdome product installer (`aidome.sh`), application configuration (`.env`), and container images are **not** part of this repository — they are delivered separately by the AIdome team once the infrastructure is ready.
+> **Scope — infrastructure prerequisites only.** This blueprint provisions the EC2 server environment via cloud-init: OS hardening, Docker Engine, iptables firewall, AWS SSM Agent, CloudWatch Agent, and a dedicated operator user.
+> The AIdome product installer (`aidome.sh`), application configuration (`.env`), and container images are **not** part of this repository.
+> - they are delivered separately by the AIdome team once the infrastructure is ready.
 
 ---
 
