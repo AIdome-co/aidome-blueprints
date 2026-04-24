@@ -3,6 +3,7 @@
 > **Scope — Infrastructure Prerequisites Only**
 > This blueprint sets up the EC2 server environment: OS hardening, Docker Engine, firewall rules,
 > AWS SSM Agent, and the `aidome-ops` operator account. The AIdome product installer (`aidome.sh`),
+
 > application configuration, `.env` files, and container images are delivered separately by the
 > AIdome team.
 
