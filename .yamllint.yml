@@ -1,0 +1,35 @@
+# yamllint configuration for aidome-blueprints
+#
+# This config is intentionally tuned for cloud-init files, which:
+#   - Start with "#cloud-config" (no space after #, no "---" header)
+#   - Use [ cmd, arg, ... ] syntax with spaces inside brackets (bootcmd)
+#   - Contain long shell commands (lines > 80 chars are expected)
+#
+# CloudFormation files are NOT validated by yamllint — cfn-lint handles them.
+
+extends: default
+
+rules:
+  # cloud-init files start with "#cloud-config" — no space after "#" is intentional.
+  comments:
+    min-spaces-from-content: 1
+    require-starting-space: false
+
+  # cloud-init files use "#cloud-config" as a directive, not "---".
+  document-start: disable
+
+  # Long shell commands are inevitable in cloud-init runcmd blocks.
+  # Treat over-length lines as warnings rather than errors.
+  line-length:
+    max: 160
+    level: warning
+
+  # cloud-init bootcmd uses [ cloud-init-per, instance, cmd, ... ] with spaces.
+  brackets:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+
+  # cloud-init uses "true"/"false" and "yes"/"no" as native YAML booleans.
+  truthy:
+    allowed-values: ['true', 'false', 'yes', 'no']
+    check-keys: false
