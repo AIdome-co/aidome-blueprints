@@ -1,7 +1,6 @@
 # Blueprint 01 · AWS EC2
 
-> Customer-facing EC2 blueprint. Provisions a hardened, private-subnet EC2 instance
-> bootstrapped via cloud-init. Once up, the customer runs `aidome.sh` to install AIDome.
+> **Scope — infrastructure prerequisites only.** This blueprint provisions the EC2 server environment via cloud-init: OS hardening, Docker Engine, iptables firewall, AWS SSM Agent, CloudWatch Agent, and a dedicated operator user. The AIdome product installer (`aidome.sh`), application configuration (`.env`), and container images are **not** part of this repository — they are delivered separately by the AIdome team once the infrastructure is ready.
 
 ---
 
@@ -274,6 +273,8 @@ Use `scripts/cloud-init-deb.yaml` for Debian-family OS types (`ubuntu-*`, `debia
 ---
 
 ## Post-boot: install AIDome
+
+> **Note:** `aidome.sh` and the application container images are **not** part of this repository. This section is provided as context only. The AIdome team will supply the installer URL and credentials once the infrastructure is provisioned.
 
 Once the EC2 instance is up and cloud-init has completed (~5 min):
 

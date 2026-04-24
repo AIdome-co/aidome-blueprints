@@ -11,6 +11,8 @@ If you are an AI assistant opening this repo, **read this file first**, then the
 
 `aidome-blueprints` is a collection of **production-ready deployment blueprints** for the AIdome platform. It is **not** an application codebase — it is an Infrastructure-as-Code (IaC) and documentation repository.
 
+> **Scope:** This repository covers **infrastructure prerequisites only** — provisioning the server environment (OS hardening, Docker Engine, firewall, AWS agents, operator user). The AIdome product installer (`aidome.sh`), application configuration, `.env` files, and container images are **out of scope** and are delivered separately by the AIdome team.
+
 | # | Blueprint | Tooling |
 |---|-----------|---------|
 | 01 | AWS EC2 – Single Node (customer onboarding) | Terraform, CloudFormation, cloud-init |
