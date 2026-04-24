@@ -98,17 +98,43 @@ The correct cloud-init script and root block device name are derived automatical
 
 > **Vendor recommendation:** Ubuntu 24.04 LTS. All other OS types are community-supported.
 
-| `os_type` value | Distribution | Cloud-init script | Root device |
-|---|---|---|---|
-| `ubuntu-2404` ✅ | Ubuntu 24.04 LTS (Noble) | `cloud-init-deb.yaml` | `/dev/sda1` |
-| `ubuntu-2204` | Ubuntu 22.04 LTS (Jammy) | `cloud-init-deb.yaml` | `/dev/sda1` |
-| `debian-12` | Debian 12 (Bookworm) | `cloud-init-deb.yaml` | `/dev/xvda` |
-| `centos-9` | CentOS Stream 9 | `cloud-init-rhel.yaml` | `/dev/sda1` |
-| `rhel-9` | Red Hat Enterprise Linux 9 | `cloud-init-rhel.yaml` | `/dev/sda1` |
-| `rhel-10` | Red Hat Enterprise Linux 10 | `cloud-init-rhel.yaml` | `/dev/sda1` |
-| `almalinux-9` | AlmaLinux 9 (RHEL-compatible) | `cloud-init-rhel.yaml` | `/dev/sda1` |
-| `oracle-9` | Oracle Linux 9 (RHEL-compatible) | `cloud-init-rhel.yaml` | `/dev/sda1` |
-| `rocky-9` | Rocky Linux 9 (RHEL-compatible) | `cloud-init-rhel.yaml` | `/dev/sda1` |
+| `os_type` value | Distribution | Support | Cloud-init script | Root device |
+|---|---|:---:|---|---|
+| `ubuntu-2404` | Ubuntu 24.04 LTS (Noble) | ✅ Vendor | `cloud-init-deb.yaml` | `/dev/sda1` |
+| `ubuntu-2204` | Ubuntu 22.04 LTS (Jammy) | 🟢 Community | `cloud-init-deb.yaml` | `/dev/sda1` |
+| `debian-12` | Debian 12 (Bookworm) | 🟢 Community | `cloud-init-deb.yaml` | `/dev/xvda` |
+| `centos-9` | CentOS Stream 9 | 🟢 Community | `cloud-init-rhel.yaml` | `/dev/sda1` |
+| `rhel-9` | Red Hat Enterprise Linux 9 | 🟡 Conditional | `cloud-init-rhel.yaml` | `/dev/sda1` |
+| `rhel-10` | Red Hat Enterprise Linux 10 | 🔴 Experimental | `cloud-init-rhel.yaml` | `/dev/sda1` |
+| `almalinux-9` | AlmaLinux 9 (RHEL-compatible) | 🟢 Community | `cloud-init-rhel.yaml` | `/dev/sda1` |
+| `oracle-9` | Oracle Linux 9 (RHEL-compatible) | 🟢 Community | `cloud-init-rhel.yaml` | `/dev/sda1` |
+| `rocky-9` | Rocky Linux 9 (RHEL-compatible) | 🟢 Community | `cloud-init-rhel.yaml` | `/dev/sda1` |
+
+**Support tiers:** ✅ Vendor = tested and maintained by AIdome · 🟢 Community = expected to work, not regularly tested · 🟡 Conditional = works with caveats (see footnotes) · 🔴 Experimental = known gaps, not production-ready
+
+### Feature heatmap
+
+What each cloud-init script installs and configures, per OS.
+
+**Legend:** 🟢 Full &nbsp; 🟡 Partial / conditional &nbsp; 🔴 Not supported / missing
+
+| OS | OS Hardening<br>(sysctl · SSH · fail2ban) | Docker Engine<br>+ Compose | CLI Tools<br>(curl · wget · jq · AWS CLI v2) | Sysprep<br>Cleanup |
+|---|:---:|:---:|:---:|:---:|
+| Ubuntu 24.04 LTS | 🟢 | 🟢 | 🟡 ³ | 🟢 |
+| Ubuntu 22.04 LTS | 🟢 | 🟢 | 🟡 ³ | 🟢 |
+| Debian 12 | 🟢 | 🟢 | 🟡 ³ | 🟢 |
+| CentOS Stream 9 | 🟢 | 🟢 | 🟡 ³ | 🟢 |
+| RHEL 9 | 🟡 ¹ | 🟢 | 🟡 ³ | 🟢 |
+| RHEL 10 | 🟡 ¹ | 🔴 ² | 🟡 ³ | 🟢 |
+| AlmaLinux 9 | 🟢 | 🟢 | 🟡 ³ | 🟢 |
+| Oracle Linux 9 | 🟢 | 🟢 | 🟡 ³ | 🟢 |
+| Rocky Linux 9 | 🟢 | 🟢 | 🟡 ³ | 🟢 |
+
+> ¹ **fail2ban on RHEL 9 / RHEL 10** requires EPEL. The cloud-init script enables EPEL via `subscription-manager` (CodeReady Builder) and the EPEL release RPM; this step fails silently if the instance has no active RHEL subscription, leaving fail2ban uninstalled. sysctl hardening and SSH hardening are unaffected.
+>
+> ² **Docker CE on RHEL 10** — Docker Inc. does not yet publish official packages for RHEL 10. The cloud-init Docker install step will fail. Install Podman (pre-installed on RHEL 10) or Docker CE manually using a compatible binary.
+>
+> ³ **Partial CLI tools** — `curl` and `wget` are installed by cloud-init. `jq` and `AWS CLI v2` are **not** installed; add them post-boot if required. `openssl` and `tar` are pre-installed on all supported distros and do not need explicit installation.
 
 ### AMI lookup commands
 
