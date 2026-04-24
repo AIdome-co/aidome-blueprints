@@ -17,28 +17,22 @@ Do you need high availability (multiple replicas, zero-downtime upgrades)?
          │
          ├─ Yes ──► Blueprint 04 · Air-Gapped
          │
-         └─ No
-              │
-              Do you want to evaluate AIdome on your laptop without a cloud account?
-                │
-                ├─ Yes ──► Blueprint 01 · Quickstart – Local
-                │
-                └─ No  ──► Blueprint 02 · AWS EC2 – Single Node
-                              (requires an existing AWS VPC + private subnet)
+         └─ No  ──► Blueprint 02 · AWS EC2 – Single Node
+                       (requires an existing AWS VPC + private subnet)
 ```
 
 ---
 
 ## Blueprint Comparison
 
-| | 01 · Local | 02 · AWS EC2 | 03 · HA Kubernetes | 04 · Air-Gapped |
-|---|---|---|---|---|
-| **Cloud** | None (laptop) | AWS | AWS / GCP / Azure | On-prem / private cloud |
-| **High availability** | ❌ | ❌ | ✅ | ✅ |
-| **Internet required** | ✅ | ✅ | ✅ | ❌ |
-| **Complexity** | ⭐ Beginner | ⭐⭐ Intermediate | ⭐⭐⭐ Advanced | ⭐⭐⭐⭐ Expert |
-| **Tooling** | Docker Compose | Terraform / CloudFormation | Terraform + Helm | Ansible |
-| **Self-service docs** | ✅ | ✅ | 📬 Contact us | 📬 Contact us |
+| | 02 · AWS EC2 | 03 · HA Kubernetes | 04 · Air-Gapped |
+|---|---|---|---|
+| **Cloud** | AWS | AWS / GCP / Azure | On-prem / private cloud |
+| **High availability** | ❌ | ✅ | ✅ |
+| **Internet required** | ✅ | ✅ | ❌ |
+| **Complexity** | ⭐⭐ Intermediate | ⭐⭐⭐ Advanced | ⭐⭐⭐⭐ Expert |
+| **Tooling** | Terraform / CloudFormation | Terraform + Helm | Ansible |
+| **Self-service docs** | ✅ | 📬 Contact us | 📬 Contact us |
 
 ---
 

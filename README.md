@@ -9,7 +9,6 @@
 
 | # | Blueprint | Status | Complexity | Cloud | Use-case |
 |---|-----------|--------|-----------|-------|----------|
-| 01 | [Quickstart – Local](blueprints/01-quickstart-local/README.md) | 📬 Docs pending — contact us | ⭐ Beginner | None (laptop) | Evaluation / development |
 | 02 | [AWS EC2 – Single Node](blueprints/02-aws-ec2/README.md) | ✅ Available | ⭐⭐ Intermediate | AWS | Single hardened EC2 instance — bring your own VPC |
 | 03 | [HA Kubernetes](blueprints/03-ha-kubernetes/README.md) | 📬 Docs pending — contact us | ⭐⭐⭐ Advanced | AWS / GCP / Azure | Production workloads requiring high availability and horizontal scale |
 | 04 | [Air-Gapped](blueprints/04-air-gapped/README.md) | 📬 Docs pending — contact us | ⭐⭐⭐⭐ Expert | On-prem / private cloud | Regulated / offline environments with no internet access |
@@ -27,10 +26,6 @@ aidome-blueprints/
 ├── CONTRIBUTING.md
 ├── mkdocs.yml                        ← Docs-site config (activate when ready)
 ├── blueprints/
-│   ├── 01-quickstart-local/
-│   │   ├── README.md
-│   │   ├── architecture.png
-│   │   └── docker-compose.yml
 │   ├── 02-aws-ec2/
 │   │   ├── README.md
 │   │   ├── cloudformation/
@@ -67,21 +62,6 @@ aidome-blueprints/
 ---
 
 ## 🚀 Blueprints
-
-### 01 · Quickstart – Local
-
-**File:** [`blueprints/01-quickstart-local/README.md`](blueprints/01-quickstart-local/README.md)
-
-> 📬 **Self-service docs not yet published.** This deployment is fully supported today — contact your AIdome account team.
-
-Spin up the full AIdome stack on a single laptop using Docker Compose.  
-No cloud account required—ideal for first-time evaluation and local development.
-
-**Key files:**
-- [`docker-compose.yml`](blueprints/01-quickstart-local/docker-compose.yml)
-- [`architecture.png`](blueprints/01-quickstart-local/architecture.png)
-
----
 
 ### 02 · AWS EC2 – Single Node
 

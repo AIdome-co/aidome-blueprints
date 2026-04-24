@@ -13,7 +13,6 @@ If you are an AI assistant opening this repo, **read this file first**, then the
 
 | # | Blueprint | Tooling |
 |---|-----------|---------|
-| 01 | Quickstart – Local | Docker Compose |
 | 02 | AWS EC2 – Single Node (customer onboarding) | Terraform, CloudFormation, cloud-init |
 | 03 | HA Kubernetes | Terraform + Helm |
 | 04 | Air-Gapped | Ansible |
@@ -40,7 +39,6 @@ aidome-blueprints/
 │   ├── prompts/                      ← Reusable prompt files (.prompt.md)
 │   └── workflows/                    ← CI: validate.yml, publish-docs.yml
 ├── blueprints/
-│   ├── 01-quickstart-local/          ← docker-compose.yml
 │   ├── 02-aws-ec2/                   ← terraform/, cloudformation/, scripts/
 │   ├── 03-ha-kubernetes/             ← terraform/, helm/
 │   └── 04-air-gapped/                ← ansible/
@@ -84,7 +82,6 @@ These apply to **every** change, regardless of which blueprint you are editing.
 7. **Format and lint before committing.** Run `terraform fmt`, `tflint`, `ansible-lint`, `yamllint`, `shellcheck`, and `cfn-lint` as appropriate.
 8. **Document variables and outputs.** Every `variable` and `output` block must have `description` and `type`.
 9. **Idempotency for configuration management.** Prefer idempotent Ansible modules; avoid `shell`/`command`/`raw` unless gated with `creates:`/`removes:`.
-10. **Test in `01-quickstart-local` first** when prototyping changes that apply to higher blueprints.
 
 ---
 
