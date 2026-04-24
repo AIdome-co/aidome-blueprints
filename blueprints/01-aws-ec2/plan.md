@@ -95,7 +95,7 @@ This file tracks the remaining gaps from the post-merge audit of PR #2 against t
 | ~~🟠 Medium~~ | ~~`netfilter-persistent reload` missing from `cloud-init-deb.yaml`~~ ✅ Fixed |
 | ~~🟢 Low~~ | ~~Heatmap CLI Tools column showed 🟡 (partial) — now 🟢 (all installed)~~ ✅ Fixed |
 | ~~🟢 Low~~ | ~~Heatmap missing columns (iptables, SSM, CW Agent, Auto-updates)~~ ✅ Fixed |
-| 🟠 Medium | `github_ref` defaults to `"main"` — mutable supply-chain risk; should default to a pinned tag at first release |
+| 🟢 Low | `github_ref` defaults to `"main"` — supply-chain risk only when users explicitly opt into `cloud_init_delivery = "github"` (default is now `"local"`); pin to a release tag at first release |
 | 🟠 Medium | `#include` integrity check — no SHA256 verification of downloaded cloud-init YAML |
 | 🟠 Medium | CloudFormation has no `local`/gzip equivalent for air-gapped deployments (CFN parameter limit) |
 | 🟠 Medium | Host iptables SSH rule too broad vs `allowed_ssh_cidr` (requires cloud-init templating) |

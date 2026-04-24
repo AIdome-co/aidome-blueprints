@@ -39,7 +39,7 @@ locals {
   cloud_init_user_data               = local.cloud_init_file_exists ? file(local.effective_cloud_init_template_path) : null
 
   # ── GitHub delivery ────────────────────────────────────────────────────────
-  # Used when cloud_init_delivery = "github" (default).
+  # Used when cloud_init_delivery = "github" (opt-in; "local" is the default).
   # cloud-init's #include directive fetches and processes the referenced URL at
   # first boot — the user-data payload is only ~100 bytes.
   # Pin github_ref to a release tag or commit SHA in production to prevent
