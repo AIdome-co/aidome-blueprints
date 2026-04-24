@@ -41,8 +41,8 @@ This file tracks the remaining gaps from the post-merge audit of PR #2 against t
 ### Low priority
 
 - [x] Add `terraform.tfvars.example` — created at `terraform/terraform.tfvars.example`.
-- [ ] Add optional CloudWatch Agent / log-shipping guidance.
-- [ ] Add optional customer-managed KMS key support for EBS encryption.
+- [x] Add CloudWatch Agent installation + metrics/log config — agent installed in cloud-init; ships data when `CloudWatchAgentServerPolicy` is attached to the instance role.
+- [x] Add optional customer-managed KMS key support — `kms_key_id` variable in Terraform; `KmsKeyId` parameter in CloudFormation.
 - [ ] Consider tighter default egress rules with commented examples.
 - [ ] Consider adding Terraform remote backend guidance (left to customer intentionally).
 
@@ -60,4 +60,10 @@ This file tracks the remaining gaps from the post-merge audit of PR #2 against t
 | 🟠 Medium | Host iptables SSH rule too broad vs `allowed_ssh_cidr` (requires cloud-init templating) |
 | 🟠 Medium | CloudFormation bootstrap readiness (`CreationPolicy`/`cfn-signal`) |
 | ~~🟢 Low~~ | ~~terraform.tfvars.example~~ ✅ Created |
-| 🟢 Low | CloudWatch, KMS, egress tightening, remote backend guidance |
+| ~~🟢 Low~~ | ~~CloudWatch Agent + log shipping~~ ✅ Installed in cloud-init; active with `CloudWatchAgentServerPolicy` |
+| ~~🟢 Low~~ | ~~Customer-managed KMS key for EBS~~ ✅ `kms_key_id` in TF; `KmsKeyId` in CFN |
+| ~~🟢 Low~~ | ~~Ubuntu 22.04~~ ✅ Upgraded to Ubuntu 24.04 LTS (Noble) throughout |
+| ~~🟢 Low~~ | ~~SSH: deprecated `ChallengeResponseAuthentication`~~ ✅ Replaced with `KbdInteractiveAuthentication` (OpenSSH 9.x) |
+| ~~🟢 Low~~ | ~~UFW / iptables conflict on Ubuntu 24.04~~ ✅ UFW explicitly disabled in cloud-init |
+| 🟢 Low | Tighter default egress rules with commented examples |
+| 🟢 Low | Terraform remote backend guidance (left to customer) |

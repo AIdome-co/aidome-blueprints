@@ -20,7 +20,7 @@
   │   │                                             │  │
   │   │   ┌───────────────────────────────────┐    │  │
   │   │   │          EC2 Instance             │    │  │
-  │   │   │  (Ubuntu 22.04 LTS, no public IP) │    │  │
+  │   │   │  (Ubuntu 24.04 LTS, no public IP) │    │  │
   │   │   │                                   │    │  │
   │   │   │  cloud-init on first boot:        │    │  │
   │   │   │  ├─ SSH hardening (port 22)       │    │  │
@@ -74,6 +74,7 @@
 | fail2ban | 5 retries, 1-hour ban, SSH port 22 |
 | Docker Engine | Installed via official APT repository + GPG verification |
 | AWS SSM Agent | Enables SSM Session Manager (no bastion host required) |
+| CloudWatch Agent | System metrics (CPU, mem, disk) + log shipping to CloudWatch Logs |
 | Dedicated operator | `aidome-ops` non-root sudo user; Docker group member |
 | sysctl hardening | CIS-aligned kernel + network parameters |
 | Unattended upgrades | Security patches auto-applied |
@@ -85,7 +86,7 @@
 - Existing VPC with a **private subnet**
   - **NAT Gateway** for outbound HTTPS (apt, Docker Hub, SSM) — _or_ —
   - **VPC Interface Endpoints** (`com.amazonaws.<region>.ssm`, `com.amazonaws.<region>.ssmmessages`, `com.amazonaws.<region>.ec2messages`) for a fully private deployment without a NAT Gateway
-- Ubuntu 22.04 LTS AMI (`ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*`)
+- Ubuntu 24.04 LTS AMI (`ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*`)
 - **IAM instance profile** with `AmazonSSMManagedInstanceCore` policy — **required for SSM Session Manager access** (strongly recommended over SSH for private-subnet instances; without it, SSM will not work)
 
 ---
@@ -100,7 +101,7 @@ module "aidome_ec2" {
 
   vpc_id            = "vpc-xxxxxxxx"
   private_subnet_id = "subnet-xxxxxxxx"
-  ami_id            = "ami-xxxxxxxx"  # Ubuntu 22.04 LTS
+  ami_id            = "ami-xxxxxxxx"  # Ubuntu 24.04 LTS (Noble)
 
   # Recommended: attach an IAM profile with AmazonSSMManagedInstanceCore
   iam_instance_profile_name = "aidome-ssm-profile"
@@ -162,5 +163,7 @@ curl -fsSL https://your-bucket/aidome.sh | sudo bash
 - Restrict `allowed_ssh_cidr` / `AllowedSshCidr` to the narrowest practical range.
 - **VPC endpoints for SSM**: if the subnet has no NAT Gateway, create VPC Interface Endpoints for `ssm`, `ssmmessages`, and `ec2messages` to allow the SSM Agent to reach AWS APIs without internet access.
 - Host iptables accept SSH from any source by default (defense-in-depth; the primary perimeter is the AWS Security Group). For stricter hosts, tighten the `INPUT` SSH rule to match your `allowed_ssh_cidr` after provisioning.
+- **CloudWatch Agent** is installed automatically. To activate metrics and log shipping, attach a IAM role policy with `CloudWatchAgentServerPolicy` to the instance profile.
+- **Customer-managed KMS key**: pass `kms_key_id` (Terraform) or `KmsKeyId` (CloudFormation) to encrypt the EBS volume with your own key instead of the default AWS managed key.
 - Review and tighten egress rules before production use.
 - To enable IP forwarding for future VPN use, uncomment the `ip_forward` lines in `scripts/cloud-init.yaml` under `/etc/sysctl.d/99-aidome-security.conf`.

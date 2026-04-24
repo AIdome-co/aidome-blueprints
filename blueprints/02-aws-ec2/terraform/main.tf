@@ -61,6 +61,7 @@ resource "aws_instance" "vm_instance" {
     volume_size = var.root_volume_size
     volume_type = "gp3"
     encrypted   = true
+    kms_key_id  = var.kms_key_id
   }
 
   metadata_options {
