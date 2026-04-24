@@ -34,6 +34,8 @@ aidome-blueprints/
 ├── mkdocs.yml
 ├── .github/
 │   ├── copilot-instructions.md       ← Pointer to AGENTS.md for GitHub Copilot
+│   ├── agents/                       ← Copilot custom agents (.agent.md files)
+│   ├── hooks/                        ← Copilot session hooks (secrets-scanner)
 │   ├── instructions/                 ← Path-scoped instructions (applyTo front matter)
 │   ├── prompts/                      ← Reusable prompt files (.prompt.md)
 │   └── workflows/                    ← CI: validate.yml, publish-docs.yml
@@ -49,7 +51,9 @@ aidome-blueprints/
 ├── docs/                             ← Cross-cutting docs (MkDocs)
 ├── assets/diagrams/                  ← Architecture diagram sources
 └── skills/
-    └── planning-with-files/          ← Agent Skill for multi-step task planning
+    ├── planning-with-files/          ← Agent Skill for multi-step task planning
+    ├── security-review/              ← AI-powered security scanner skill
+    └── conventional-commit/          ← Conventional commit message helper
 ```
 
 ---
@@ -150,6 +154,9 @@ These files live in [`.github/instructions/`](.github/instructions/). Agents tha
 | `github-actions-ci-cd.instructions.md` | `.github/workflows/*.yml` | github/awesome-copilot |
 | `devops-core-principles.instructions.md` | `*` (all files) | github/awesome-copilot |
 | `security-iac.instructions.md` | `**/*.tf`, `**/cloudformation/**`, `**/ansible/**`, `**/helm/**` | custom (this repo) |
+| `containerization-docker-best-practices.instructions.md` | `**/Dockerfile*`, `**/docker-compose*.yml`, `**/compose*.yml` | github/awesome-copilot |
+| `security-and-owasp.instructions.md` | `**` (all files) | github/awesome-copilot |
+| `code-review-generic.instructions.md` | `**` (all files, excludes coding-agent) | github/awesome-copilot |
 
 ---
 
@@ -165,8 +172,38 @@ Located in [`.github/prompts/`](.github/prompts/). Copy-paste the file contents 
 ## 8. Agent Skills
 
 - [`skills/planning-with-files/`](skills/planning-with-files/) — Manus-style persistent markdown planning. Use for any task that spans **3+ phases** or **5+ tool calls** (e.g., authoring a new blueprint, cross-cutting refactors, migrations). Imported from [OthmanAdi/planning-with-files](https://github.com/OthmanAdi/planning-with-files) (MIT).
+- [`skills/security-review/`](skills/security-review/) — AI-powered security scanner. Use when asked to scan code or IaC for vulnerabilities, hardcoded secrets, overly permissive IAM, or any "is this secure?" request. Invoke with `/security-review` or `/security-review <path>`. (MIT, github/awesome-copilot)
+- [`skills/conventional-commit/`](skills/conventional-commit/) — Conventional commit message generator following the [Conventional Commits specification](https://www.conventionalcommits.org). Use when creating commit messages for blueprint changes. (MIT, github/awesome-copilot)
 
-Claude Code users: the skill is auto-discoverable. Codex CLI users: invoke by reading `skills/planning-with-files/SKILL.md`. Copilot CLI users: `gh copilot skill install ./skills/planning-with-files` (future).
+Claude Code users: skills are auto-discoverable. Codex CLI users: invoke by reading the respective `SKILL.md`. Copilot CLI users: `gh copilot skill install ./skills/<name>` (future).
+
+---
+
+## 8a. Custom Agents
+
+Custom agents live in [`.github/agents/`](.github/agents/). Use them in Copilot Chat with `@agent-name` syntax or by invoking in VS Code Copilot. Each agent is specialized for a specific domain:
+
+| Agent file | Purpose |
+|-----------|---------|
+| `terraform.agent.md` | Terraform specialist with HCP Terraform workflows, registry lookup, and code generation |
+| `terraform-iac-reviewer.agent.md` | Reviews Terraform for state safety, security, modular design, and plan/apply discipline |
+| `devops-expert.agent.md` | Full DevOps lifecycle guidance (Plan → Code → Build → Test → Release → Deploy → Operate → Monitor) |
+| `github-actions-expert.agent.md` | GitHub Actions CI/CD security (action pinning, OIDC, least privilege, supply-chain safety) |
+| `platform-sre-kubernetes.agent.md` | Kubernetes SRE for Blueprint 04: reliable rollouts, security defaults, health probes, PDBs |
+| `se-security-reviewer.agent.md` | Security code review (OWASP Top 10, Zero Trust, IaC-specific checks) |
+| `se-technical-writer.agent.md` | Technical writing for blueprint READMEs, ADRs, tutorials, and docs |
+
+---
+
+## 8b. Copilot Hooks
+
+Hooks in [`.github/hooks/`](.github/hooks/) run automatically during Copilot coding agent sessions:
+
+| Hook | Trigger | Purpose |
+|------|---------|---------|
+| `secrets-scanner/` | `sessionEnd` | Scans all modified files for accidentally leaked secrets, credentials, and API keys before commit |
+
+The secrets scanner runs in `warn` mode by default (logs findings, does not block). Set `SCAN_MODE=block` in `hooks.json` to enforce blocking on findings.
 
 ---
 
@@ -195,6 +232,10 @@ Claude Code users: the skill is auto-discoverable. Codex CLI users: invoke by re
 
 Imported assets retain their original MIT licenses:
 - `.github/instructions/*.instructions.md` (most) — from [github/awesome-copilot](https://github.com/github/awesome-copilot)
+- `.github/agents/*.agent.md` — from [github/awesome-copilot](https://github.com/github/awesome-copilot)
+- `.github/hooks/secrets-scanner/` — from [github/awesome-copilot](https://github.com/github/awesome-copilot)
 - `skills/planning-with-files/` — from [OthmanAdi/planning-with-files](https://github.com/OthmanAdi/planning-with-files)
+- `skills/security-review/` — from [github/awesome-copilot](https://github.com/github/awesome-copilot)
+- `skills/conventional-commit/` — from [github/awesome-copilot](https://github.com/github/awesome-copilot)
 
 This repository is licensed under the terms in [LICENSE](LICENSE).

@@ -1,0 +1,471 @@
+#cloud-config
+#
+# AIDome EC2 Cloud-Init Configuration — Debian Family
+# ====================================================
+# Supported distributions:
+#   - Ubuntu 24.04 LTS (Noble)   — recommended
+#   - Ubuntu 22.04 LTS (Jammy)
+#   - Debian 12 (Bookworm)
+#
+# This cloud-init configuration sets up a secure EC2 instance for AIDome with:
+# - Hardened SSH configuration (port 22)
+# - Fail2ban intrusion prevention
+# - iptables firewall
+# - Docker Engine installation (via official APT repository, auto-detects distro)
+# - AWS SSM Agent for session management (recommended over bastion hosts)
+# - Dedicated non-root operator account (aidome-ops)
+# - CloudWatch Agent for metrics and log shipping
+# - Unattended security upgrades
+#
+# After boot, connect via SSH or SSM Session Manager and run:
+#   curl -fsSL https://your-bucket/aidome.sh | sudo bash
+#
+# References:
+# - https://cloudinit.readthedocs.io/
+# - https://docs.docker.com/engine/install/ubuntu/
+# - https://docs.docker.com/engine/install/debian/
+# - https://docs.aws.amazon.com/systems-manager/latest/userguide/ssm-agent.html
+# - https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Install-CloudWatch-Agent.html
+#
+# Version: 2.0 (Debian family — Ubuntu 22.04/24.04, Debian 12)
+# ====================================================
+
+preserve_hostname: false
+hostname: aidome-ec2
+fqdn: aidome-ec2.local
+ssh_pwauth: false
+
+# Timezone configuration
+timezone: UTC
+
+# Explicit operator account — do NOT rely on the cloud provider's default user alone
+users:
+  - default
+  - name: aidome-ops
+    gecos: AIDome Operator
+    groups: [sudo, docker, adm]
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: true
+    # Inject SSH public key via EC2 key_name or pass ssh_authorized_keys here
+
+# APT configuration
+apt:
+  preserve_sources_list: true
+  conf: |
+    APT::Periodic::Update-Package-Lists "1";
+    APT::Periodic::Unattended-Upgrade "1";
+    APT::Install-Recommends "false";
+    APT::Get::Assume-Yes "true";
+    Dpkg::Options::="--force-confdef";
+    Dpkg::Options::="--force-confold";
+
+# Boot commands — run before cloud-init modules (best practice for critical setup)
+bootcmd:
+  - [ cloud-init-per, instance, mkdir-iptables, mkdir, -p, /etc/iptables ]
+  - [ cloud-init-per, instance, set-noninteractive, sh, -c, 'echo "debconf debconf/frontend select Noninteractive" | debconf-set-selections' ]
+
+write_files:
+  # SSH hardening — port 22 only (customers may change this after setup)
+  - path: /etc/ssh/sshd_config.d/aidome-hardening.conf
+    permissions: '0644'
+    owner: root:root
+    content: |
+      Port 22
+      AddressFamily any
+
+      # Authentication
+      PermitRootLogin no
+      PasswordAuthentication no
+      PubkeyAuthentication yes
+      KbdInteractiveAuthentication no
+      UsePAM yes
+
+      # Security hardening
+      MaxAuthTries 3
+      MaxSessions 10
+      LoginGraceTime 60
+      ClientAliveInterval 300
+      ClientAliveCountMax 2
+
+      # Disable insecure features
+      PermitEmptyPasswords no
+      X11Forwarding no
+      PrintMotd no
+      PrintLastLog yes
+      TCPKeepAlive yes
+      Compression no
+      AllowTcpForwarding no
+      AllowAgentForwarding no
+      GatewayPorts no
+      PermitTunnel no
+
+      # CIS 5.2.18 — display /etc/issue.net before authentication
+      Banner /etc/issue.net
+
+  # System banner for SSH connections
+  - path: /etc/issue.net
+    permissions: '0644'
+    owner: root:root
+    content: |
+      ******************************************************************
+      *                     AIDome EC2 System                      *
+      *                                                                *
+      *  WARNING: Unauthorized access is prohibited and will be       *
+      *  prosecuted to the full extent of the law.                    *
+      *                                                                *
+      *  All activities on this system are monitored and logged.      *
+      ******************************************************************
+
+  # MOTD
+  - path: /etc/motd
+    permissions: '0644'
+    owner: root:root
+    content: |
+
+      Welcome to AIDome EC2
+      ========================
+
+      System Information:
+      - Hostname: aidome-ec2
+      - Docker: Docker Engine (rootful)
+      - SSM Agent: enabled (use SSM Session Manager for keyless access)
+
+      Quick Start — install AIDome:
+      1. Connect via SSH or AWS SSM Session Manager
+      2. Run the AIDome installer (obtain the URL from your AIDome account or support team):
+         curl -fsSL https://<your-aidome-download-url>/aidome.sh | sudo bash
+      3. Check Docker: docker ps
+      4. Check firewall rules: sudo iptables -L -n
+
+      Documentation: See /var/log/cloud-init.log
+
+  # CloudWatch Agent configuration — basic metrics + log shipping
+  # Requires IAM role with CloudWatchAgentServerPolicy attached to the instance.
+  - path: /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+    permissions: '0640'
+    owner: root:root
+    content: |
+      {
+        "agent": {
+          "metrics_collection_interval": 60,
+          "run_as_user": "cwagent"
+        },
+        "logs": {
+          "logs_collected": {
+            "files": {
+              "collect_list": [
+                {
+                  "file_path": "/var/log/cloud-init.log",
+                  "log_group_name": "/aidome-ec2/cloud-init",
+                  "log_stream_name": "{instance_id}"
+                },
+                {
+                  "file_path": "/var/log/syslog",
+                  "log_group_name": "/aidome-ec2/syslog",
+                  "log_stream_name": "{instance_id}"
+                },
+                {
+                  "file_path": "/var/log/auth.log",
+                  "log_group_name": "/aidome-ec2/auth",
+                  "log_stream_name": "{instance_id}"
+                }
+              ]
+            }
+          }
+        },
+        "metrics": {
+          "namespace": "AIDome/EC2",
+          "append_dimensions": {
+            "InstanceId": "${aws:InstanceId}"
+          },
+          "metrics_collected": {
+            "mem": {
+              "measurement": ["mem_used_percent"]
+            },
+            "disk": {
+              "measurement": ["disk_used_percent"],
+              "resources": ["/"]
+            },
+            "cpu": {
+              "totalcpu": true,
+              "measurement": ["cpu_usage_idle", "cpu_usage_user", "cpu_usage_system"]
+            }
+          }
+        }
+      }
+
+  # Sysctl security hardening
+  - path: /etc/sysctl.d/99-aidome-security.conf
+    permissions: '0644'
+    owner: root:root
+    content: |
+      # Security Configuration
+
+      # IP Forwarding — disabled by default; uncomment only if VPN/routing is required
+      # net.ipv4.ip_forward = 1
+      # net.ipv6.conf.all.forwarding = 1
+
+      # Network security
+      net.ipv4.conf.all.rp_filter = 1
+      net.ipv4.conf.default.rp_filter = 1
+      net.ipv4.conf.all.accept_source_route = 0
+      net.ipv4.conf.default.accept_source_route = 0
+      net.ipv4.conf.all.accept_redirects = 0
+      net.ipv4.conf.default.accept_redirects = 0
+      net.ipv4.conf.all.secure_redirects = 0
+      net.ipv4.conf.default.secure_redirects = 0
+      net.ipv4.conf.all.send_redirects = 0
+      net.ipv4.conf.default.send_redirects = 0
+      net.ipv4.icmp_echo_ignore_broadcasts = 1
+      net.ipv4.icmp_ignore_bogus_error_responses = 1
+
+      # Log martian packets (CIS 3.3.7)
+      net.ipv4.conf.all.log_martians = 1
+      net.ipv4.conf.default.log_martians = 1
+
+      # IPv6 security
+      net.ipv6.conf.all.accept_redirects = 0
+      net.ipv6.conf.default.accept_redirects = 0
+      net.ipv6.conf.all.accept_source_route = 0
+      net.ipv6.conf.default.accept_source_route = 0
+      # Disable IPv6 router advertisements (CIS 3.3.10)
+      net.ipv6.conf.all.accept_ra = 0
+      net.ipv6.conf.default.accept_ra = 0
+
+      # TCP hardening
+      net.ipv4.tcp_syncookies = 1
+      net.ipv4.tcp_max_syn_backlog = 2048
+      net.ipv4.tcp_synack_retries = 2
+      net.ipv4.tcp_syn_retries = 5
+
+      # Kernel security
+      kernel.dmesg_restrict = 1
+      kernel.kptr_restrict = 2
+      kernel.yama.ptrace_scope = 1
+
+      # File system security
+      fs.suid_dumpable = 0
+      fs.protected_hardlinks = 1
+      fs.protected_symlinks = 1
+
+  # Fail2ban jail for SSH on port 22
+  - path: /etc/fail2ban/jail.d/sshd.local
+    permissions: '0644'
+    owner: root:root
+    content: |
+      [sshd]
+      enabled  = true
+      port     = 22
+      filter   = sshd
+      logpath  = %(sshd_log)s
+      maxretry = 5
+      bantime  = 3600
+      findtime = 600
+
+      [DEFAULT]
+      destemail = root@localhost
+      sender = fail2ban@aidome-ec2
+      action = %(action_)s
+
+  # IPv4 firewall — SSH on port 22 + HTTPS from RFC1918
+  - path: /etc/iptables/rules.v4
+    permissions: '0644'
+    owner: root:root
+    content: |
+      # Host-level defense-in-depth (AWS Security Group is the primary perimeter).
+      # Restrict HTTPS inbound to RFC1918 private space.
+      *filter
+      :INPUT DROP [0:0]
+      :FORWARD DROP [0:0]
+      :OUTPUT ACCEPT [0:0]
+      :DOCKER-USER - [0:0]
+
+      # Allow loopback and established/related
+      -A INPUT -i lo -j ACCEPT
+      -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+      -A INPUT -p icmp --icmp-type echo-request -j ACCEPT
+
+      # SSH on port 22
+      -A INPUT -p tcp --dport 22 -j ACCEPT
+
+      # HTTPS from RFC1918 private IPv4 ranges
+      -A INPUT -s 10.0.0.0/8 -p tcp --dport 443 -j ACCEPT
+      -A INPUT -s 172.16.0.0/12 -p tcp --dport 443 -j ACCEPT
+      -A INPUT -s 192.168.0.0/16 -p tcp --dport 443 -j ACCEPT
+
+      # DOCKER-USER chain -- Docker forwards traffic through FORWARD, not INPUT.
+      # Rules here apply to container-published ports before Docker's own rules.
+      # Allow only established/related and RFC1918 sources to reach containers.
+      -A DOCKER-USER -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
+      -A DOCKER-USER -s 10.0.0.0/8 -j RETURN
+      -A DOCKER-USER -s 172.16.0.0/12 -j RETURN
+      -A DOCKER-USER -s 192.168.0.0/16 -j RETURN
+      -A DOCKER-USER -j DROP
+
+      COMMIT
+
+  # IPv6 firewall — SSH on port 22 + HTTPS from ULA space
+  - path: /etc/iptables/rules.v6
+    permissions: '0644'
+    owner: root:root
+    content: |
+      *filter
+      :INPUT DROP [0:0]
+      :FORWARD DROP [0:0]
+      :OUTPUT ACCEPT [0:0]
+
+      # Allow loopback and established/related
+      -A INPUT -i lo -j ACCEPT
+      -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+      # SSH over IPv6 on port 22
+      -A INPUT -p tcp --dport 22 -j ACCEPT
+
+      # HTTPS over IPv6 from ULA space
+      -A INPUT -s fc00::/7 -p tcp --dport 443 -j ACCEPT
+
+      COMMIT
+
+# Package management
+package_update: true
+package_upgrade: true
+
+# Packages to install
+packages:
+  - vim
+  - curl
+  - htop
+  - wget
+  - ca-certificates
+  - gnupg
+  - lsb-release
+  - python3
+  - git
+  - net-tools
+  - dnsutils
+  - iproute2
+  - traceroute
+  - mtr
+  - iptables-persistent
+  - netfilter-persistent
+  - fail2ban
+  - unattended-upgrades
+
+runcmd:
+  - 'echo "### AIDome EC2 Bootstrap Starting..."'
+  - 'echo "Start time: $(date)"'
+
+  # Apply sysctl
+  - 'sysctl -p /etc/sysctl.d/99-aidome-security.conf || echo "Warning: sysctl failed"'
+
+  # Disable UFW — iptables-persistent manages the firewall directly;
+  # UFW conflicts with our rules.v4/rules.v6 if left enabled.
+  - 'systemctl disable ufw --now 2>/dev/null || true'
+
+  # Create critical directories early
+  - 'mkdir -p /etc/iptables || echo "Warning: Failed to create /etc/iptables directory"'
+
+  # SSH restart
+  - sleep 2
+  - 'systemctl restart ssh || systemctl restart sshd || echo "Warning: SSH restart failed"'
+  - 'echo "SSH restarted on port 22"'
+
+  # Fail2ban
+  - 'systemctl enable fail2ban || true'
+  - 'systemctl restart fail2ban || echo "Warning: fail2ban failed"'
+
+  # Display system information
+  - 'cat /etc/os-release || true'
+  - 'echo "Kernel: $(uname -r)"'
+
+  # Install Docker Engine via official APT repository (GPG-verified — no pipe-to-shell)
+  # Auto-detects distribution: ubuntu (22.04/24.04) or debian (12/Bookworm).
+  - 'echo "Installing Docker Engine via official APT repository..."'
+  - |
+    . /etc/os-release
+    DOCKER_DISTRO="${ID}"
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL "https://download.docker.com/linux/${DOCKER_DISTRO}/gpg" \
+      | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    chmod a+r /etc/apt/keyrings/docker.gpg
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+      https://download.docker.com/linux/${DOCKER_DISTRO} \
+      $(lsb_release -cs) stable" \
+      > /etc/apt/sources.list.d/docker.list
+    apt-get update -qq
+    apt-get install -y docker-ce docker-ce-cli containerd.io \
+      docker-buildx-plugin docker-compose-plugin \
+      || echo "Warning: Docker install failed"
+    systemctl enable --now docker.service docker.socket || true
+    docker --version || true
+
+  # Add aidome-ops user to docker group (if not already via users: block)
+  - 'usermod -aG docker aidome-ops 2>/dev/null || true'
+
+  # Install AWS SSM Agent (enables SSM Session Manager — recommended over bastion hosts)
+  # Note: snap is available on Ubuntu; Debian 12 falls through to the apt-get path.
+  - 'echo "Installing AWS SSM Agent..."'
+  - |
+    if snap install amazon-ssm-agent --classic 2>/dev/null; then
+      echo "SSM Agent installed via snap."
+      systemctl enable --now snap.amazon-ssm-agent.amazon-ssm-agent.service 2>/dev/null || true
+    elif apt-get install -y amazon-ssm-agent 2>/dev/null; then
+      echo "SSM Agent installed via apt."
+      systemctl enable --now amazon-ssm-agent 2>/dev/null || true
+    else
+      echo "Warning: SSM agent install failed; install manually if SSM access is required."
+    fi
+
+  # Install CloudWatch Agent for metrics and log shipping
+  # Auto-detects distribution: ubuntu or debian for the correct .deb URL.
+  # The agent starts automatically; it only ships data if the IAM role has
+  # CloudWatchAgentServerPolicy attached to this instance.
+  - 'echo "Installing Amazon CloudWatch Agent..."'
+  - |
+    . /etc/os-release
+    CW_DISTRO="${ID}"
+    curl -fsSL \
+      "https://s3.amazonaws.com/amazoncloudwatch-agent/${CW_DISTRO}/amd64/latest/amazon-cloudwatch-agent.deb" \
+      -o /tmp/amazon-cloudwatch-agent.deb \
+      && dpkg -i /tmp/amazon-cloudwatch-agent.deb \
+      && rm -f /tmp/amazon-cloudwatch-agent.deb \
+      || echo "Warning: CloudWatch Agent install failed; install manually if metrics/log shipping is required"
+    /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+      -a fetch-config \
+      -m ec2 \
+      -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json \
+      -s 2>/dev/null \
+      || echo "Warning: CloudWatch Agent failed to start (check IAM role has CloudWatchAgentServerPolicy)"
+
+  # Load and persist firewall rules
+  - 'netfilter-persistent reload || echo "Warning: netfilter-persistent reload failed"'
+  - 'systemctl enable netfilter-persistent || true'
+  - 'echo "Firewall rules loaded and persisted"'
+
+  # Cleanup
+  - 'apt-get clean || true'
+  - 'rm -rf /var/cache/apt/archives/* /var/lib/apt/lists/* 2>/dev/null || true'
+
+  # Status
+  - 'echo "### Bootstrap Summary"'
+  - 'echo "Hostname: $(hostname)"'
+  - 'echo "Docker status: $(systemctl is-active docker || echo inactive)"'
+  - 'echo "Fail2ban status: $(systemctl is-active fail2ban || echo inactive)"'
+  - 'echo "Firewall status: $(systemctl is-active netfilter-persistent || echo inactive)"'
+  - 'echo "CWAgent status: $(systemctl is-active amazon-cloudwatch-agent || echo inactive)"'
+  - 'echo "End time: $(date)"'
+  - 'echo "### Cloud-init completed. Instance is ready."'
+  - 'echo "### Connect via SSH or SSM Session Manager, then run the AIDome installer (obtain URL from your AIDome account or support team)."'
+
+final_message: "AIDome EC2 setup completed at $TIMESTAMP after $UPTIME seconds. Connect and run aidome.sh to install AIDome."
+
+# Reboot the VM after cloud-init completes to ensure all kernel/network settings are applied
+power_state:
+  delay: 1
+  mode: reboot
+  message: "Rebooting to complete AIDome EC2 setup..."
+  timeout: 30
+  condition: true

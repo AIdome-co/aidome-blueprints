@@ -46,8 +46,29 @@ variable "private_subnet_id" {
   default     = null
 }
 
+variable "os_type" {
+  description = "Operating system type for the EC2 instance. Drives the cloud-init bootstrap script selection. Supported values: ubuntu-2404 (vendor-recommended), ubuntu-2204, debian-12, centos-9, rhel-9, rhel-10, almalinux-9, oracle-9, rocky-9. See README for AMI lookup commands per OS type."
+  type        = string
+  default     = "ubuntu-2404"
+
+  validation {
+    condition = contains([
+      "ubuntu-2404",
+      "ubuntu-2204",
+      "debian-12",
+      "centos-9",
+      "rhel-9",
+      "rhel-10",
+      "almalinux-9",
+      "oracle-9",
+      "rocky-9",
+    ], var.os_type)
+    error_message = "os_type must be one of: ubuntu-2404, ubuntu-2204, debian-12, centos-9, rhel-9, rhel-10, almalinux-9, oracle-9, rocky-9."
+  }
+}
+
 variable "ami_id" {
-  description = "AMI ID for the EC2 instance (Ubuntu 24.04 LTS recommended)"
+  description = "AMI ID for the EC2 instance. Must match the selected os_type. See README for per-OS AMI lookup commands. Ubuntu 24.04 LTS is the vendor-recommended choice."
   type        = string
 }
 
