@@ -25,9 +25,9 @@ This file tracks the remaining gaps from the post-merge audit of PR #2 against t
 
 ### High priority
 
-- [x] **Operator-access consistency**: decide whether customers should SSH as `ubuntu`, SSH as `aidome-ops`, or use SSM only; update README and cloud-init to match. ~~Currently README shows `ssh ubuntu@` but `aidome-ops` is the intended operator.~~ Fixed: README now shows `ssh aidome-ops@`.
-- [x] **SSH Banner directive missing**: ~~`/etc/issue.net` is written but sshd config has no `Banner /etc/issue.net` directive (CIS 5.2.18 requires this). Banner is effectively dead.~~ Fixed: added `Banner /etc/issue.net` to sshd hardening config.
-- [x] **Docker + iptables interaction**: ~~Docker manipulates iptables and bypasses host-level rules via the DOCKER-USER chain. No DOCKER-USER rules are defined, so container-published ports ignore the iptables `INPUT DROP` policy. Must document or enforce intended behavior.~~ Fixed: added `DOCKER-USER` chain with RFC1918-only allow rules to `rules.v4`.
+- [x] **Operator-access consistency**: README now shows `ssh aidome-ops@` (was `ubuntu@`); SSM Session Manager remains the recommended path.
+- [x] **SSH Banner directive (CIS 5.2.18)**: added `Banner /etc/issue.net` to sshd hardening config.
+- [x] **Docker + iptables interaction**: added `DOCKER-USER` chain with RFC1918-only allow rules to `rules.v4`.
 
 ### Medium priority
 
