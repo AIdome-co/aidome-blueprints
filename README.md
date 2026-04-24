@@ -7,12 +7,12 @@
 
 ## 📋 Blueprint Comparison
 
-| # | Blueprint | Status | Complexity | Cloud | HA | Use-case |
-|---|-----------|--------|-----------|-------|----|----------|
-| 01 | [Quickstart – Local](blueprints/01-quickstart-local/README.md) | 📬 Docs pending — contact us | ⭐ Beginner | None (laptop) | ❌ | Evaluation / development |
-| 02 | [AWS EC2 – Single Node](blueprints/02-aws-ec2/README.md) | ✅ Available | ⭐⭐ Intermediate | AWS | ❌ | Single hardened EC2 instance — bring your own VPC |
-| 03 | [HA Kubernetes](blueprints/03-ha-kubernetes/README.md) | 📬 Docs pending — contact us | ⭐⭐⭐ Advanced | AWS / GCP / Azure | ✅ | Production workloads requiring high availability and horizontal scale |
-| 04 | [Air-Gapped](blueprints/04-air-gapped/README.md) | 📬 Docs pending — contact us | ⭐⭐⭐⭐ Expert | On-prem / private cloud | ✅ | Regulated / offline environments with no internet access |
+| # | Blueprint | Status | Complexity | Cloud | Use-case |
+|---|-----------|--------|-----------|-------|----------|
+| 01 | [Quickstart – Local](blueprints/01-quickstart-local/README.md) | 📬 Docs pending — contact us | ⭐ Beginner | None (laptop) | Evaluation / development |
+| 02 | [AWS EC2 – Single Node](blueprints/02-aws-ec2/README.md) | ✅ Available | ⭐⭐ Intermediate | AWS | Single hardened EC2 instance — bring your own VPC |
+| 03 | [HA Kubernetes](blueprints/03-ha-kubernetes/README.md) | 📬 Docs pending — contact us | ⭐⭐⭐ Advanced | AWS / GCP / Azure | Production workloads requiring high availability and horizontal scale |
+| 04 | [Air-Gapped](blueprints/04-air-gapped/README.md) | 📬 Docs pending — contact us | ⭐⭐⭐⭐ Expert | On-prem / private cloud | Regulated / offline environments with no internet access |
 
 ---
 
