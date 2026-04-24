@@ -6,7 +6,7 @@ description: 'Best practices for Kubernetes YAML manifests including labeling co
 <!--
 Source: https://github.com/github/awesome-copilot/blob/main/instructions/kubernetes-manifests.instructions.md
 License: MIT (github/awesome-copilot)
-applyTo scoped to blueprint 03 (HA Kubernetes) Helm templates.
+applyTo scoped to blueprint 03 (Kubernetes) Helm templates.
 -->
 
 # Kubernetes Manifests Instructions

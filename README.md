@@ -12,8 +12,8 @@
 | # | Blueprint | Status | Complexity | Cloud | Use-case |
 |---|-----------|--------|-----------|-------|----------|
 | 01 | [AWS EC2 – Single Node](blueprints/01-aws-ec2/README.md) | ✅ Available | ⭐⭐ Intermediate | AWS | Single hardened EC2 instance — bring your own VPC |
-| 02 | [HA Kubernetes](blueprints/02-ha-kubernetes/README.md) | 📬 Docs pending — Contact Us | ⭐⭐⭐ Advanced | AWS / GCP / Azure | Production workloads requiring high availability and horizontal scale |
-| 03 | [Air-Gapped](blueprints/03-air-gapped/README.md) | 📬 Docs pending — Contact Us | ⭐⭐⭐⭐ Expert | On-prem / private cloud | Regulated / offline environments with no internet access |
+| 02 | [Kubernetes](blueprints/02-ha-kubernetes/README.md) | 📬 Contact Us | ⭐⭐⭐ Advanced | AWS / GCP / Azure | Production workloads requiring high availability and horizontal scale |
+| 03 | [Air-Gapped](blueprints/03-air-gapped/README.md) | 📬 Contact Us | ⭐⭐⭐⭐ Expert | On-prem / private cloud | Regulated / offline environments with no internet access |
 
 ---
 
@@ -82,7 +82,7 @@ Requires an existing AWS VPC and private subnet (Bring Your Own VPC).
 
 ---
 
-### 02 · HA Kubernetes
+### 02 · Kubernetes
 
 **File:** [`blueprints/02-ha-kubernetes/README.md`](blueprints/02-ha-kubernetes/README.md)
 

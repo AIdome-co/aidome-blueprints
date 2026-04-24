@@ -1,7 +1,7 @@
 # Blueprint 03 · Air-Gapped
 
 > 📬 **Self-service documentation for this blueprint is not yet published here.**
-> The deployment is **fully supported and operational today** — contact
+> The deployment is **fully supported** — contact
 > [support@aidome.co](mailto:support@aidome.co) to discuss your air-gapped requirements.
 
 ---
