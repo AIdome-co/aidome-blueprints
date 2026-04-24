@@ -56,7 +56,7 @@ Recommended jobs for `validate.yml`:
    - `terraform validate`
    - `tflint --recursive` (optional)
    - `tfsec .` or `checkov -d .` (pick one; pin to a specific release)
-2. **CloudFormation**: `cfn-lint blueprints/02-aws-ec2/cloudformation/*.yaml`
+2. **CloudFormation**: `cfn-lint blueprints/01-aws-ec2/cloudformation/*.yaml`
 3. **Ansible**: `yamllint` + `ansible-lint` + `ansible-playbook --syntax-check`
 4. **Helm / Kubernetes**: `helm lint` + `helm template ... | kubeconform -strict`
 5. **Shell scripts**: `shellcheck $(git ls-files '*.sh')`

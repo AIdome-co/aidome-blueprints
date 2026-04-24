@@ -9,15 +9,15 @@ This guide helps you pick the right AIdome deployment blueprint for your situati
 ```
 Do you need high availability (multiple replicas, zero-downtime upgrades)?
   │
-  ├─ Yes ──► Blueprint 03 · HA Kubernetes
+  ├─ Yes ──► Blueprint 02 · HA Kubernetes
   │
   └─ No
        │
        Is the target environment air-gapped (no internet access)?
          │
-         ├─ Yes ──► Blueprint 04 · Air-Gapped
+         ├─ Yes ──► Blueprint 03 · Air-Gapped
          │
-         └─ No  ──► Blueprint 02 · AWS EC2 – Single Node
+         └─ No  ──► Blueprint 01 · AWS EC2 – Single Node
                        (requires an existing AWS VPC + private subnet)
 ```
 
@@ -25,7 +25,7 @@ Do you need high availability (multiple replicas, zero-downtime upgrades)?
 
 ## Blueprint Comparison
 
-| | 02 · AWS EC2 | 03 · HA Kubernetes | 04 · Air-Gapped |
+| | 01 · AWS EC2 | 02 · HA Kubernetes | 03 · Air-Gapped |
 |---|---|---|---|
 | **Cloud** | AWS | AWS / GCP / Azure | On-prem / private cloud |
 | **High availability** | ❌ | ✅ | ✅ |

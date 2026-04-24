@@ -9,9 +9,9 @@
 
 | # | Blueprint | Status | Complexity | Cloud | Use-case |
 |---|-----------|--------|-----------|-------|----------|
-| 02 | [AWS EC2 – Single Node](blueprints/02-aws-ec2/README.md) | ✅ Available | ⭐⭐ Intermediate | AWS | Single hardened EC2 instance — bring your own VPC |
-| 03 | [HA Kubernetes](blueprints/03-ha-kubernetes/README.md) | 📬 Docs pending — contact us | ⭐⭐⭐ Advanced | AWS / GCP / Azure | Production workloads requiring high availability and horizontal scale |
-| 04 | [Air-Gapped](blueprints/04-air-gapped/README.md) | 📬 Docs pending — contact us | ⭐⭐⭐⭐ Expert | On-prem / private cloud | Regulated / offline environments with no internet access |
+| 01 | [AWS EC2 – Single Node](blueprints/01-aws-ec2/README.md) | ✅ Available | ⭐⭐ Intermediate | AWS | Single hardened EC2 instance — bring your own VPC |
+| 02 | [HA Kubernetes](blueprints/02-ha-kubernetes/README.md) | 📬 Docs pending — contact us | ⭐⭐⭐ Advanced | AWS / GCP / Azure | Production workloads requiring high availability and horizontal scale |
+| 03 | [Air-Gapped](blueprints/03-air-gapped/README.md) | 📬 Docs pending — contact us | ⭐⭐⭐⭐ Expert | On-prem / private cloud | Regulated / offline environments with no internet access |
 
 ---
 
@@ -26,17 +26,17 @@ aidome-blueprints/
 ├── CONTRIBUTING.md
 ├── mkdocs.yml                        ← Docs-site config (activate when ready)
 ├── blueprints/
-│   ├── 02-aws-ec2/
+│   ├── 01-aws-ec2/
 │   │   ├── README.md
 │   │   ├── cloudformation/
 │   │   ├── scripts/
 │   │   └── terraform/
-│   ├── 03-ha-kubernetes/
+│   ├── 02-ha-kubernetes/
 │   │   ├── README.md
 │   │   ├── architecture.png
 │   │   ├── terraform/
 │   │   └── helm/
-│   └── 04-air-gapped/
+│   └── 03-air-gapped/
 │       ├── README.md
 │       └── ansible/
 ├── shared/
@@ -63,9 +63,9 @@ aidome-blueprints/
 
 ## 🚀 Blueprints
 
-### 02 · AWS EC2 – Single Node
+### 01 · AWS EC2 – Single Node
 
-**File:** [`blueprints/02-aws-ec2/README.md`](blueprints/02-aws-ec2/README.md)
+**File:** [`blueprints/01-aws-ec2/README.md`](blueprints/01-aws-ec2/README.md)
 
 Provision a hardened, private-subnet EC2 instance on AWS.
 Cloud-init bootstraps SSH hardening, iptables, fail2ban, Docker Engine, the AWS SSM Agent,
@@ -74,15 +74,15 @@ provides credentials and the `aidome.sh` installer to complete the product insta
 Requires an existing AWS VPC and private subnet (Bring Your Own VPC).
 
 **Key files:**
-- [`terraform/`](blueprints/02-aws-ec2/terraform/)
-- [`cloudformation/`](blueprints/02-aws-ec2/cloudformation/)
-- [`scripts/cloud-init.yaml`](blueprints/02-aws-ec2/scripts/cloud-init.yaml)
+- [`terraform/`](blueprints/01-aws-ec2/terraform/)
+- [`cloudformation/`](blueprints/01-aws-ec2/cloudformation/)
+- [`scripts/cloud-init.yaml`](blueprints/01-aws-ec2/scripts/cloud-init.yaml)
 
 ---
 
-### 03 · HA Kubernetes
+### 02 · HA Kubernetes
 
-**File:** [`blueprints/03-ha-kubernetes/README.md`](blueprints/03-ha-kubernetes/README.md)
+**File:** [`blueprints/02-ha-kubernetes/README.md`](blueprints/02-ha-kubernetes/README.md)
 
 > 📬 **Self-service docs not yet published.** This deployment is fully supported today — contact your AIdome account team.
 
@@ -93,9 +93,9 @@ upgrades.
 
 ---
 
-### 04 · Air-Gapped
+### 03 · Air-Gapped
 
-**File:** [`blueprints/04-air-gapped/README.md`](blueprints/04-air-gapped/README.md)
+**File:** [`blueprints/03-air-gapped/README.md`](blueprints/03-air-gapped/README.md)
 
 > 📬 **Self-service docs not yet published.** This deployment is fully supported today — contact [support@aidome.co](mailto:support@aidome.co) to discuss requirements.
 

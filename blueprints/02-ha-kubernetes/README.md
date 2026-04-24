@@ -1,4 +1,4 @@
-# Blueprint 03 · HA Kubernetes
+# Blueprint 02 · HA Kubernetes
 
 > 📬 **Self-service documentation for this blueprint is not yet published here.**
 > The deployment is **fully supported and operational today** — contact your AIdome
@@ -8,7 +8,7 @@
 
 ## Overview
 
-Blueprint 03 deploys AIdome on a **managed Kubernetes cluster** with high availability,
+Blueprint 02 deploys AIdome on a **managed Kubernetes cluster** with high availability,
 horizontal scaling, and zero-downtime upgrades. It is the recommended path for production
 workloads that need resilience beyond what a single node can offer.
 
