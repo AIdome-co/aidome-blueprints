@@ -9,20 +9,6 @@ terraform {
   }
 }
 
-# ── Greenfield networking (create_vpc = true) ──────────────────────────────────
-
-module "networking" {
-  count  = var.create_vpc ? 1 : 0
-  source = "../../../shared/terraform-modules/networking"
-
-  availability_zone   = var.availability_zone
-  name_prefix         = var.name_prefix
-  private_subnet_cidr = var.private_subnet_cidr
-  public_subnet_cidr  = var.public_subnet_cidr
-  tags                = var.tags
-  vpc_cidr            = var.vpc_cidr
-}
-
 locals {
   # Map os_type to OS family — drives cloud-init template selection.
   # Debian family (APT-based): ubuntu-2404, ubuntu-2204, debian-12 → cloud-init-deb.yaml
@@ -46,17 +32,12 @@ locals {
   default_cloud_init_path            = "${path.module}/../scripts/cloud-init-${local.os_family}.yaml"
   effective_cloud_init_template_path = coalesce(var.cloud_init_template_path, local.default_cloud_init_path)
   cloud_init_user_data               = fileexists(local.effective_cloud_init_template_path) ? file(local.effective_cloud_init_template_path) : null
-
-  # Resolve VPC / subnet IDs — use module outputs when create_vpc = true, otherwise
-  # fall back to the caller-supplied variables.
-  effective_vpc_id            = var.create_vpc ? module.networking[0].vpc_id : var.vpc_id
-  effective_private_subnet_id = var.create_vpc ? module.networking[0].private_subnet_id : var.private_subnet_id
 }
 
 resource "aws_security_group" "vm_private_sg" {
   name_prefix = "${var.name_prefix}-private-"
   description = "AIDome EC2 private-subnet security group"
-  vpc_id      = local.effective_vpc_id
+  vpc_id      = var.vpc_id
 
   egress {
     description      = "Allow all outbound traffic"
@@ -89,7 +70,7 @@ resource "aws_vpc_security_group_ingress_rule" "ssh_internal" {
 resource "aws_instance" "vm_instance" {
   ami                         = var.ami_id
   instance_type               = var.instance_type
-  subnet_id                   = local.effective_private_subnet_id
+  subnet_id                   = var.private_subnet_id
   vpc_security_group_ids      = concat([aws_security_group.vm_private_sg.id], var.additional_security_group_ids)
   iam_instance_profile        = var.iam_instance_profile_name
   key_name                    = var.key_name
@@ -111,10 +92,6 @@ resource "aws_instance" "vm_instance" {
   }
 
   lifecycle {
-    precondition {
-      condition     = var.create_vpc || (var.vpc_id != null && var.private_subnet_id != null)
-      error_message = "Either set create_vpc = true, or provide both vpc_id and private_subnet_id."
-    }
     precondition {
       condition     = local.cloud_init_user_data != null
       error_message = "cloud-init template file not found: ${local.effective_cloud_init_template_path}"

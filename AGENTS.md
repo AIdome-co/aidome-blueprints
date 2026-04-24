@@ -45,8 +45,7 @@ aidome-blueprints/
 │   ├── 04-ha-kubernetes/             ← terraform/, helm/
 │   └── 05-air-gapped/                ← ansible/
 ├── shared/
-│   ├── terraform-modules/
-│   │   └── networking/               ← VPC, subnets, NAT GW (used by 02-aws-ec2 greenfield mode)
+│   ├── terraform-modules/            ← Reusable TF modules
 │   └── scripts/                      ← Shared shell scripts
 ├── docs/                             ← Cross-cutting docs (MkDocs)
 ├── assets/diagrams/                  ← Architecture diagram sources
