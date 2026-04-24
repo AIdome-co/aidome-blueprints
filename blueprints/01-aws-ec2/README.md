@@ -11,6 +11,7 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [Architecture](#architecture)
 - [Tested Platforms](#tested-platforms)
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
@@ -39,6 +40,54 @@ You have two equally supported deployment paths. **Both use the same cloud-init 
 |---|---|---|
 | **Option A — Terraform** | You need repeatable, state-tracked deployments | `terraform/` |
 | **Option B — CloudFormation** | You prefer AWS-native tooling with no extra local dependencies | `cloudformation/` |
+
+---
+
+## Architecture
+
+```
+  Customer / Operator
+         │
+         │  SSH (port 22) or SSM Session Manager (recommended)
+         ▼
+  ┌─────────────────────────────────────────────────────┐
+  │                    AWS VPC                          │
+  │                                                     │
+  │   ┌─────────────────────────────────────────────┐  │
+  │   │            Private Subnet                   │  │
+  │   │                                             │  │
+  │   │   ┌───────────────────────────────────┐    │  │
+  │   │   │          EC2 Instance             │    │  │
+  │   │   │  (no public IP; Ubuntu 24.04 LTS  │    │  │
+  │   │   │   recommended)                    │    │  │
+  │   │   │                                   │    │  │
+  │   │   │  cloud-init on first boot:        │    │  │
+  │   │   │  ├─ SSH hardening (port 22)       │    │  │
+  │   │   │  ├─ iptables firewall             │    │  │
+  │   │   │  ├─ fail2ban                      │    │  │
+  │   │   │  ├─ Docker Engine                 │    │  │
+  │   │   │  ├─ AWS SSM Agent                 │    │  │
+  │   │   │  └─ Dedicated operator user       │    │  │
+  │   │   └───────────────────────────────────┘    │  │
+  │   │           │                                │  │
+  │   │   ┌───────┴──────────┐                     │  │
+  │   │   │  Security Group  │                     │  │
+  │   │   │  - egress: all   │                     │  │
+  │   │   │  - ingress: 22   │                     │  │
+  │   │   │    (optional)    │                     │  │
+  │   │   └──────────────────┘                     │  │
+  │   └─────────────────────────────────────────────┘  │
+  │                                                     │
+  │   ┌─────────────────────────────────────────────┐  │
+  │   │ NAT Gateway / VPC Endpoints (existing infra)│  │
+  │   │ Required for: apt/yum, Docker Hub, SSM      │  │
+  │   └─────────────────────────────────────────────┘  │
+  └─────────────────────────────────────────────────────┘
+         │
+         │  outbound (HTTPS/443) for package installs
+         ▼
+    Internet / AWS Services
+```
 
 ---
 
