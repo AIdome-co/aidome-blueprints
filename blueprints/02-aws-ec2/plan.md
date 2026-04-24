@@ -25,9 +25,9 @@ This file tracks the remaining gaps from the post-merge audit of PR #2 against t
 
 ### High priority
 
-- [ ] **Operator-access consistency**: decide whether customers should SSH as `ubuntu`, SSH as `aidome-ops`, or use SSM only; update README and cloud-init to match. Currently README shows `ssh ubuntu@` but `aidome-ops` is the intended operator.
-- [ ] **SSH Banner directive missing**: `/etc/issue.net` is written but sshd config has no `Banner /etc/issue.net` directive (CIS 5.2.18 requires this). Banner is effectively dead.
-- [ ] **Docker + iptables interaction**: Docker manipulates iptables and bypasses host-level rules via the DOCKER-USER chain. No DOCKER-USER rules are defined, so container-published ports ignore the iptables `INPUT DROP` policy. Must document or enforce intended behavior.
+- [x] **Operator-access consistency**: decide whether customers should SSH as `ubuntu`, SSH as `aidome-ops`, or use SSM only; update README and cloud-init to match. ~~Currently README shows `ssh ubuntu@` but `aidome-ops` is the intended operator.~~ Fixed: README now shows `ssh aidome-ops@`.
+- [x] **SSH Banner directive missing**: ~~`/etc/issue.net` is written but sshd config has no `Banner /etc/issue.net` directive (CIS 5.2.18 requires this). Banner is effectively dead.~~ Fixed: added `Banner /etc/issue.net` to sshd hardening config.
+- [x] **Docker + iptables interaction**: ~~Docker manipulates iptables and bypasses host-level rules via the DOCKER-USER chain. No DOCKER-USER rules are defined, so container-published ports ignore the iptables `INPUT DROP` policy. Must document or enforce intended behavior.~~ Fixed: added `DOCKER-USER` chain with RFC1918-only allow rules to `rules.v4`.
 
 ### Medium priority
 
@@ -49,9 +49,9 @@ This file tracks the remaining gaps from the post-merge audit of PR #2 against t
 
 | Priority | Item |
 |---|---|
-| 🔴 High | Operator-access flow consistency (`ubuntu` vs `aidome-ops` vs SSM) |
-| 🔴 High | SSH `Banner /etc/issue.net` directive missing (CIS 5.2.18) |
-| 🔴 High | Docker + iptables / DOCKER-USER chain not handled |
+| ~~🔴 High~~ | ~~Operator-access flow consistency (`ubuntu` vs `aidome-ops` vs SSM)~~ ✅ Fixed |
+| ~~🔴 High~~ | ~~SSH `Banner /etc/issue.net` directive missing (CIS 5.2.18)~~ ✅ Fixed |
+| ~~🔴 High~~ | ~~Docker + iptables / DOCKER-USER chain not handled~~ ✅ Fixed |
 | 🟠 Medium | Host iptables SSH rule too broad vs `allowed_ssh_cidr` |
 | 🟠 Medium | CloudFormation cloud-init delivery UX (no cfn-signal) |
 | 🟠 Medium | IAM instance profile should be required or warned |

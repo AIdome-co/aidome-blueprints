@@ -146,7 +146,7 @@ Once the EC2 instance is up and cloud-init has completed (~5 min):
 aws ssm start-session --target <instance-id>
 
 # Or connect via SSH if key_name / AllowedSshCidr was set
-ssh -i my-key.pem ubuntu@<private-ip>
+ssh -i my-key.pem aidome-ops@<private-ip>
 
 # Install AIDome
 curl -fsSL https://your-bucket/aidome.sh | sudo bash
