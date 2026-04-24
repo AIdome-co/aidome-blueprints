@@ -42,7 +42,7 @@ aidome-blueprints/
 │   └── workflows/                    ← CI: validate.yml, publish-docs.yml
 ├── blueprints/
 │   ├── 01-aws-ec2/                   ← terraform/, cloudformation/, scripts/
-│   ├── 02-ha-kubernetes/             ← terraform/, helm/
+│   ├── 02-kubernetes/                ← terraform/, helm/
 │   └── 03-air-gapped/                ← ansible/
 ├── shared/
 │   ├── terraform-modules/            ← Reusable TF modules
@@ -114,10 +114,10 @@ cfn-lint blueprints/01-aws-ec2/cloudformation/*.yaml
 aws cloudformation validate-template --template-body file://...
 ```
 
-### Kubernetes / Helm (blueprint 03)
+### Kubernetes / Helm (blueprint 02)
 ```bash
-helm lint blueprints/02-ha-kubernetes/helm/<chart>
-helm template blueprints/02-ha-kubernetes/helm/<chart> | kubeconform -strict
+helm lint blueprints/02-kubernetes/helm/<chart>
+helm template blueprints/02-kubernetes/helm/<chart> | kubeconform -strict
 ```
 
 ### Shell scripts (`shared/scripts/`, `blueprints/*/scripts/`)
@@ -145,7 +145,7 @@ These files live in [`.github/instructions/`](.github/instructions/). Agents tha
 |------|-----------|--------|
 | `terraform.instructions.md` | `**/*.tf` | [github/awesome-copilot](https://github.com/github/awesome-copilot) |
 | `ansible.instructions.md` | `**/*.yaml, **/*.yml` (Ansible playbooks/roles) | github/awesome-copilot |
-| `kubernetes-manifests.instructions.md` | `blueprints/02-ha-kubernetes/helm/**`, `k8s/**`, `manifests/**` | github/awesome-copilot |
+| `kubernetes-manifests.instructions.md` | `blueprints/02-kubernetes/helm/**`, `k8s/**`, `manifests/**` | github/awesome-copilot |
 | `cloudformation.instructions.md` | `**/cloudformation/**/*.yaml`, `**/cloudformation/**/*.yml` | custom (this repo) |
 | `shell.instructions.md` | `**/*.sh` | github/awesome-copilot |
 | `markdown.instructions.md` | `**/*.md` | github/awesome-copilot |
