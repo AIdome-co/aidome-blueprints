@@ -22,6 +22,8 @@
 ```
 aidome-blueprints/
 ├── README.md                         ← You are here
+├── AGENTS.md                         ← Canonical guide for AI coding agents
+├── CLAUDE.md                         ← Claude Code entry point (→ AGENTS.md)
 ├── LICENSE
 ├── CONTRIBUTING.md
 ├── mkdocs.yml                        ← Docs-site config (activate when ready)
@@ -56,7 +58,12 @@ aidome-blueprints/
 │   └── security-guidelines.md
 ├── assets/
 │   └── diagrams/
+├── skills/
+│   └── planning-with-files/          ← Agent Skill (SKILL.md + templates)
 └── .github/
+    ├── copilot-instructions.md       ← GitHub Copilot entry point (→ AGENTS.md)
+    ├── instructions/                 ← Path-scoped instructions (.instructions.md)
+    ├── prompts/                      ← Reusable prompt files (.prompt.md)
     └── workflows/
         ├── validate.yml
         └── publish-docs.yml
@@ -151,6 +158,16 @@ Designed for regulated industries and on-premises private-cloud setups.
 | [`assets/diagrams/`](assets/diagrams/) | Source files for architecture diagrams |
 
 ---
+
+## 🤖 AI-Assisted Contribution
+
+This repository is configured for **GitHub Copilot**, **OpenAI Codex / Codex CLI**, and **Claude Code**. The canonical guide for all three is [`AGENTS.md`](AGENTS.md), wired in via:
+
+- [`CLAUDE.md`](CLAUDE.md) — Claude Code entry point
+- [`.github/copilot-instructions.md`](.github/copilot-instructions.md) — GitHub Copilot entry point
+- `AGENTS.md` itself — Codex / Cursor / Aider convention ([agents.md spec](https://agents.md))
+
+Path-scoped rules live in [`.github/instructions/`](.github/instructions/) (Terraform, Ansible, Kubernetes, CloudFormation, shell, security, …) and are applied automatically by Copilot's `applyTo` front matter. Reusable prompts are in [`.github/prompts/`](.github/prompts/). The [planning-with-files skill](skills/planning-with-files/) is available for multi-step tasks.
 
 ## 🤝 Contributing
 
