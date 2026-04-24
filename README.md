@@ -3,6 +3,8 @@
 > **Production-ready deployment blueprints for the AIdome platform.**  
 > Pick the blueprint that matches your scale, cloud posture, and operational maturity—then follow its step-by-step guide.
 
+> **Scope:** This repository contains **infrastructure prerequisites only**. Each blueprint provisions the server environment (OS hardening, Docker Engine, firewall, AWS agents, operator user). The AIdome product installer, application configuration, and container images are **not** part of this repository — they are delivered separately by the AIdome team after the infrastructure is provisioned.
+
 ---
 
 ## 📋 Blueprint Comparison

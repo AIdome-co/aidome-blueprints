@@ -21,6 +21,20 @@ This file tracks the remaining gaps from the post-merge audit of PR #2 against t
 - [x] Terraform + CloudFormation parity for core EC2 provisioning.
 - [x] Tags on all resources.
 
+## Done in heatmap PR (this PR)
+
+- [x] **OS support tier column** added to README OS table (Vendor / Community / Conditional / Experimental).
+- [x] **Feature heatmap** added to README — expanded from 4 to 8 columns after gap resolution.
+- [x] **SSH hardening: LogLevel VERBOSE** — added to both cloud-init scripts (CIS 5.2.5).
+- [x] **SSH hardening: AllowUsers aidome-ops** — added to both cloud-init scripts (CIS 5.2.17).
+- [x] **Sysctl: kernel.randomize_va_space = 2** — added to both cloud-init scripts (CIS 1.5.2 ASLR).
+- [x] **auditd installed, enabled, and rules loaded** — `auditd` (Debian) / `audit` (RHEL) package added; `99-aidome-cis.rules` written to `/etc/audit/rules.d/`; `augenrules --load` called in runcmd (CIS 4.1.3/4/5/7/11/15/17).
+- [x] **jq installed** — added to packages in both cloud-init scripts.
+- [x] **AWS CLI v2 installed** — official binary installer from `awscli.amazonaws.com` added to runcmd in both scripts; `unzip` package dependency also added; GPG key `A6310ACC4672475C` verified.
+- [x] **Heatmap CLI Tools column upgraded to 🟢** — all tools now fully installed.
+- [x] **Heatmap expanded** — added columns for iptables Firewall, SSM Agent, CloudWatch Agent, Auto-updates, Package Cleanup.
+- [x] **netfilter-persistent reload regression fixed** — `netfilter-persistent reload` re-added to `cloud-init-deb.yaml` runcmd so firewall rules are active immediately (not only after reboot).
+
 ## Remaining follow-up items
 
 ### High priority
@@ -57,6 +71,15 @@ This file tracks the remaining gaps from the post-merge audit of PR #2 against t
 | ~~🟠 Medium~~ | ~~Docker GPG keyring path~~ ✅ Already aligned with current Docker docs |
 | ~~🟠 Medium~~ | ~~IAM instance profile should be required or warned~~ ✅ README updated |
 | ~~🟠 Medium~~ | ~~VPC endpoint guidance missing~~ ✅ README updated |
+| ~~🟠 Medium~~ | ~~SSH `LogLevel VERBOSE` missing (CIS 5.2.5)~~ ✅ Fixed |
+| ~~🟠 Medium~~ | ~~SSH `AllowUsers aidome-ops` missing (CIS 5.2.17)~~ ✅ Fixed |
+| ~~🟠 Medium~~ | ~~`kernel.randomize_va_space = 2` missing (CIS 1.5.2)~~ ✅ Fixed |
+| ~~🟠 Medium~~ | ~~`auditd` not installed (CIS 4.1.x)~~ ✅ Fixed — package installed, service enabled, CIS rules loaded via `augenrules` |
+| ~~🟠 Medium~~ | ~~`jq` not installed~~ ✅ Fixed |
+| ~~🟠 Medium~~ | ~~`AWS CLI v2` not installed~~ ✅ Fixed (GPG key `A6310ACC4672475C` confirmed correct) |
+| ~~🟠 Medium~~ | ~~`netfilter-persistent reload` missing from `cloud-init-deb.yaml`~~ ✅ Fixed |
+| ~~🟢 Low~~ | ~~Heatmap CLI Tools column showed 🟡 (partial) — now 🟢 (all installed)~~ ✅ Fixed |
+| ~~🟢 Low~~ | ~~Heatmap missing columns (iptables, SSM, CW Agent, Auto-updates)~~ ✅ Fixed |
 | 🟠 Medium | Host iptables SSH rule too broad vs `allowed_ssh_cidr` (requires cloud-init templating) |
 | 🟠 Medium | CloudFormation bootstrap readiness (`CreationPolicy`/`cfn-signal`) |
 | ~~🟢 Low~~ | ~~terraform.tfvars.example~~ ✅ Created |

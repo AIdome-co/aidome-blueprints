@@ -1,7 +1,6 @@
 # Blueprint 01 · AWS EC2
 
-> Customer-facing EC2 blueprint. Provisions a hardened, private-subnet EC2 instance
-> bootstrapped via cloud-init. Once up, the customer runs `aidome.sh` to install AIDome.
+> **Scope — infrastructure prerequisites only.** This blueprint provisions the EC2 server environment via cloud-init: OS hardening, Docker Engine, iptables firewall, AWS SSM Agent, CloudWatch Agent, and a dedicated operator user. The AIdome product installer (`aidome.sh`), application configuration (`.env`), and container images are **not** part of this repository — they are delivered separately by the AIdome team once the infrastructure is ready.
 
 ---
 
@@ -98,17 +97,43 @@ The correct cloud-init script and root block device name are derived automatical
 
 > **Vendor recommendation:** Ubuntu 24.04 LTS. All other OS types are community-supported.
 
-| `os_type` value | Distribution | Cloud-init script | Root device |
-|---|---|---|---|
-| `ubuntu-2404` ✅ | Ubuntu 24.04 LTS (Noble) | `cloud-init-deb.yaml` | `/dev/sda1` |
-| `ubuntu-2204` | Ubuntu 22.04 LTS (Jammy) | `cloud-init-deb.yaml` | `/dev/sda1` |
-| `debian-12` | Debian 12 (Bookworm) | `cloud-init-deb.yaml` | `/dev/xvda` |
-| `centos-9` | CentOS Stream 9 | `cloud-init-rhel.yaml` | `/dev/sda1` |
-| `rhel-9` | Red Hat Enterprise Linux 9 | `cloud-init-rhel.yaml` | `/dev/sda1` |
-| `rhel-10` | Red Hat Enterprise Linux 10 | `cloud-init-rhel.yaml` | `/dev/sda1` |
-| `almalinux-9` | AlmaLinux 9 (RHEL-compatible) | `cloud-init-rhel.yaml` | `/dev/sda1` |
-| `oracle-9` | Oracle Linux 9 (RHEL-compatible) | `cloud-init-rhel.yaml` | `/dev/sda1` |
-| `rocky-9` | Rocky Linux 9 (RHEL-compatible) | `cloud-init-rhel.yaml` | `/dev/sda1` |
+| `os_type` value | Distribution | Support | Cloud-init script | Root device |
+|---|---|:---:|---|---|
+| `ubuntu-2404` | Ubuntu 24.04 LTS (Noble) | ✅ Vendor | `cloud-init-deb.yaml` | `/dev/sda1` |
+| `ubuntu-2204` | Ubuntu 22.04 LTS (Jammy) | 🟢 Community | `cloud-init-deb.yaml` | `/dev/sda1` |
+| `debian-12` | Debian 12 (Bookworm) | 🟢 Community | `cloud-init-deb.yaml` | `/dev/xvda` |
+| `centos-9` | CentOS Stream 9 | 🟢 Community | `cloud-init-rhel.yaml` | `/dev/sda1` |
+| `rhel-9` | Red Hat Enterprise Linux 9 | 🟡 Conditional | `cloud-init-rhel.yaml` | `/dev/sda1` |
+| `rhel-10` | Red Hat Enterprise Linux 10 | 🔴 Experimental | `cloud-init-rhel.yaml` | `/dev/sda1` |
+| `almalinux-9` | AlmaLinux 9 (RHEL-compatible) | 🟢 Community | `cloud-init-rhel.yaml` | `/dev/sda1` |
+| `oracle-9` | Oracle Linux 9 (RHEL-compatible) | 🟢 Community | `cloud-init-rhel.yaml` | `/dev/sda1` |
+| `rocky-9` | Rocky Linux 9 (RHEL-compatible) | 🟢 Community | `cloud-init-rhel.yaml` | `/dev/sda1` |
+
+**Support tiers:** ✅ Vendor = tested and maintained by AIdome · 🟢 Community = expected to work, not regularly tested · 🟡 Conditional = works with caveats (see footnotes) · 🔴 Experimental = known gaps, not production-ready
+
+### Feature heatmap
+
+What each cloud-init script installs and configures, per OS.
+
+**Legend:** 🟢 Full &nbsp; 🟡 Partial / conditional &nbsp; 🔴 Not supported / missing
+
+| OS | OS Hardening<br>(sysctl · SSH · auditd · fail2ban) | Docker Engine<br>+ Compose | CLI Tools<br>(curl · wget · jq · AWS CLI v2) | iptables<br>Firewall | SSM<br>Agent | CloudWatch<br>Agent | Auto-<br>updates | Package<br>Cleanup |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Ubuntu 24.04 LTS | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 ¹ | 🟢 | 🟢 |
+| Ubuntu 22.04 LTS | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 ¹ | 🟢 | 🟢 |
+| Debian 12 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 ¹ | 🟢 | 🟢 |
+| CentOS Stream 9 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 ¹ | 🟢 | 🟢 |
+| RHEL 9 | 🟡 ² | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 ¹ | 🟢 | 🟢 |
+| RHEL 10 | 🟡 ² | 🔴 ³ | 🟢 | 🟢 | 🟢 | 🟢 ¹ | 🟢 | 🟢 |
+| AlmaLinux 9 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 ¹ | 🟢 | 🟢 |
+| Oracle Linux 9 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 ¹ | 🟢 | 🟢 |
+| Rocky Linux 9 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 ¹ | 🟢 | 🟢 |
+
+> ¹ **CloudWatch Agent** — ships data and logs only when the IAM instance profile has `CloudWatchAgentServerPolicy` attached. Agent is installed and started on all OS types; it silently no-ops without the policy.
+>
+> ² **fail2ban on RHEL 9 / RHEL 10** requires EPEL. The cloud-init script enables EPEL via `subscription-manager` (CodeReady Builder) and the EPEL release RPM; this step fails silently if the instance has no active RHEL subscription, leaving fail2ban uninstalled. sysctl hardening, SSH hardening, and auditd are unaffected.
+>
+> ³ **Docker CE on RHEL 10** — Docker Inc. does not yet publish official packages for RHEL 10. The cloud-init Docker install step will fail. Install Podman (pre-installed on RHEL 10) or Docker CE manually using a compatible binary.
 
 ### AMI lookup commands
 
@@ -248,6 +273,8 @@ Use `scripts/cloud-init-deb.yaml` for Debian-family OS types (`ubuntu-*`, `debia
 ---
 
 ## Post-boot: install AIDome
+
+> **Note:** `aidome.sh` and the application container images are **not** part of this repository. This section is provided as context only. The AIdome team will supply the installer URL and credentials once the infrastructure is provisioned.
 
 Once the EC2 instance is up and cloud-init has completed (~5 min):
 
