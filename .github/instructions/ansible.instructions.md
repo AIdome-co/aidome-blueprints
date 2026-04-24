@@ -1,6 +1,6 @@
 ---
 description: 'Ansible conventions and best practices'
-applyTo: 'blueprints/04-air-gapped/ansible/**/*.yaml, blueprints/04-air-gapped/ansible/**/*.yml, **/playbooks/**/*.yaml, **/playbooks/**/*.yml, **/roles/**/*.yaml, **/roles/**/*.yml'
+applyTo: 'blueprints/03-air-gapped/ansible/**/*.yaml, blueprints/03-air-gapped/ansible/**/*.yml, **/playbooks/**/*.yaml, **/playbooks/**/*.yml, **/roles/**/*.yaml, **/roles/**/*.yml'
 ---
 
 <!--

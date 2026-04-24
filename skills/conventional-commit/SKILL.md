@@ -47,19 +47,19 @@ This skill generates conventional commit messages following the [Conventional Co
 ### Examples for this IaC repo
 
 ```
-feat(02-aws-ec2): add KMS key for EBS encryption
-fix(02-aws-ec2): correct subnet CIDR calculation
-docs(03-ha-kubernetes): update Helm values reference table
+feat(01-aws-ec2): add KMS key for EBS encryption
+fix(01-aws-ec2): correct subnet CIDR calculation
+docs(02-ha-kubernetes): update Helm values reference table
 chore(deps): pin terraform aws provider to 5.50.0
 ci(validate): add tfsec security scan to PR workflow
 refactor(shared/terraform-modules): extract vpc into reusable module
-feat(04-air-gapped): add ansible role for docker hardening
+feat(03-air-gapped): add ansible role for docker hardening
 ```
 
 ### Validation
 
 - **type**: Must be one of the allowed types above
-- **scope**: Optional, but recommended. Use blueprint name (e.g., `02-aws-ec2`), module name, or component name
+- **scope**: Optional, but recommended. Use blueprint name (e.g., `01-aws-ec2`), module name, or component name
 - **description**: Required. Use the imperative mood (e.g., "add", not "added", "adds"). Max 72 chars
 - **body**: Optional. Use for additional context, reasoning, or breaking change details
 - **footer**: Use for breaking changes (`BREAKING CHANGE: description`) or issue references (`Closes #123`)
