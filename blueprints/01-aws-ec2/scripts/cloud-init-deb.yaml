@@ -299,6 +299,13 @@ write_files:
       # Failure mode: 1=silent (log failure), 2=panic (kernel panic on overflow)
       -f 1
 
+      # 4.1.2 — System date and time modification (clock manipulation is a log-tampering prerequisite)
+      # Reference: https://www.cisecurity.org/benchmark/ubuntu_linux
+      -a always,exit -F arch=b64 -S adjtimex -k time_change
+      -a always,exit -F arch=b64 -S settimeofday -k time_change
+      -a always,exit -F arch=b64 -S clock_settime -k time_change
+      -w /etc/localtime -p wa -k time_change
+
       # 4.1.3 — Identity and credential management
       -w /etc/group   -p wa -k identity
       -w /etc/passwd  -p wa -k identity
@@ -329,6 +336,12 @@ write_files:
 
       # 4.1.15 — SSH authorized_keys changes
       -w /home/aidome-ops/.ssh -p wa -k authorized_keys
+
+      # 4.1.6 — Network socket creation (IPv4 AF_INET=2, IPv6 AF_INET6=10)
+      # Audits raw socket creation to detect port-scanning and covert channel tools.
+      # Reference: https://www.cisecurity.org/benchmark/ubuntu_linux
+      -a always,exit -F arch=b64 -S socket -F a0=2  -k network_socket_created
+      -a always,exit -F arch=b64 -S socket -F a0=10 -k network_socket_created
 
       # 4.1.17 — Kernel module loading/unloading
       -w /sbin/insmod  -p x -k kernel_modules
@@ -426,6 +439,7 @@ packages:
   - jq
   - unzip
   - auditd
+  - audispd-plugins
 
 runcmd:
   - 'echo "### AIDome EC2 Bootstrap Starting..."'
