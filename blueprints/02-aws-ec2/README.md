@@ -1,0 +1,162 @@
+# Blueprint 02 · AWS EC2
+
+> Customer-facing EC2 blueprint. Provisions a hardened, private-subnet EC2 instance
+> bootstrapped via cloud-init. Once up, the customer runs `aidome.sh` to install AIDome.
+
+---
+
+## Architecture
+
+```
+  Customer / Operator
+         │
+         │  SSH (port 22) or SSM Session Manager (recommended)
+         ▼
+  ┌─────────────────────────────────────────────────────┐
+  │                    AWS VPC                          │
+  │                                                     │
+  │   ┌─────────────────────────────────────────────┐  │
+  │   │            Private Subnet                   │  │
+  │   │                                             │  │
+  │   │   ┌───────────────────────────────────┐    │  │
+  │   │   │          EC2 Instance             │    │  │
+  │   │   │  (Ubuntu 22.04 LTS, no public IP) │    │  │
+  │   │   │                                   │    │  │
+  │   │   │  cloud-init on first boot:        │    │  │
+  │   │   │  ├─ SSH hardening (port 22)       │    │  │
+  │   │   │  ├─ iptables firewall             │    │  │
+  │   │   │  ├─ fail2ban                      │    │  │
+  │   │   │  ├─ Docker Engine (APT repo)      │    │  │
+  │   │   │  ├─ AWS SSM Agent                 │    │  │
+  │   │   │  └─ Dedicated operator user       │    │  │
+  │   │   │                                   │    │  │
+  │   │   │  After boot:                      │    │  │
+  │   │   │  └─ Customer runs aidome.sh ───── │──► AIDome installed
+  │   │   └───────────────────────────────────┘    │  │
+  │   │           │                                │  │
+  │   │   ┌───────┴──────────┐                     │  │
+  │   │   │  Security Group  │                     │  │
+  │   │   │  - egress: all   │                     │  │
+  │   │   │  - ingress: 22   │                     │  │
+  │   │   │    (optional)    │                     │  │
+  │   │   └──────────────────┘                     │  │
+  │   └─────────────────────────────────────────────┘  │
+  │                                                     │
+  │   ┌─────────────────────────────────────────────┐  │
+  │   │  NAT Gateway / VPC Endpoints (existing infra)│  │
+  │   │  Required for: apt, Docker Hub, SSM, aidome  │  │
+  │   └─────────────────────────────────────────────┘  │
+  └─────────────────────────────────────────────────────┘
+         │
+         │  outbound (HTTPS/443) for package installs + aidome.sh
+         ▼
+    Internet / AWS Services
+```
+
+---
+
+## What it provisions
+
+| Resource | Detail |
+|---|---|
+| EC2 instance | No public IP; private subnet only |
+| Security group | Optional SSH ingress (port 22) from specified CIDR; all egress open |
+| Encrypted gp3 EBS | 30 GiB default; AES-256 at rest |
+| IMDSv2 enforced | Hop limit = 1; prevents SSRF credential theft |
+| cloud-init bootstrap | See below |
+
+### cloud-init bootstrap installs
+
+| Component | Notes |
+|---|---|
+| SSH hardening | Port 22 only; root login disabled; password auth off |
+| iptables firewall | IPv4 + IPv6; SSH open; HTTPS from RFC1918 only |
+| fail2ban | 5 retries, 1-hour ban, SSH port 22 |
+| Docker Engine | Installed via official APT repository + GPG verification |
+| AWS SSM Agent | Enables SSM Session Manager (no bastion host required) |
+| Dedicated operator | `aidome-ops` non-root sudo user; Docker group member |
+| sysctl hardening | CIS-aligned kernel + network parameters |
+| Unattended upgrades | Security patches auto-applied |
+
+---
+
+## Pre-requisites
+
+- Existing VPC with a **private subnet** (with NAT Gateway or VPC Endpoints for outbound HTTPS)
+- Ubuntu 22.04 LTS AMI (`ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*`)
+- IAM instance profile with `AmazonSSMManagedInstanceCore` policy (for SSM access)
+
+---
+
+## Usage
+
+### Terraform
+
+```hcl
+module "aidome_ec2" {
+  source = "./blueprints/02-aws-ec2/terraform"
+
+  vpc_id            = "vpc-xxxxxxxx"
+  private_subnet_id = "subnet-xxxxxxxx"
+  ami_id            = "ami-xxxxxxxx"  # Ubuntu 22.04 LTS
+
+  # Recommended: attach an IAM profile with AmazonSSMManagedInstanceCore
+  iam_instance_profile_name = "aidome-ssm-profile"
+
+  # Optional: allow SSH from internal CIDR (SSM Session Manager is preferred)
+  allowed_ssh_cidr = "10.0.0.0/8"
+  key_name         = "my-key"
+
+  instance_type    = "t3.small"
+  root_volume_size = 30
+
+  tags = {
+    Environment = "dev"
+    Project     = "aidome"
+  }
+}
+```
+
+### CloudFormation
+
+Deploy `cloudformation/ec2-private.yaml` via AWS Console, CLI, or CI/CD:
+
+```bash
+aws cloudformation deploy \
+  --template-file blueprints/02-aws-ec2/cloudformation/ec2-private.yaml \
+  --stack-name aidome-ec2 \
+  --parameter-overrides \
+      VpcId=vpc-xxxxxxxx \
+      PrivateSubnetId=subnet-xxxxxxxx \
+      AmiId=ami-xxxxxxxx \
+      IamInstanceProfileName=aidome-ssm-profile \
+  --capabilities CAPABILITY_NAMED_IAM
+```
+
+Pass cloud-init content via the `CloudInitUserData` parameter (base64-encoded by the template).
+
+---
+
+## Post-boot: install AIDome
+
+Once the EC2 instance is up and cloud-init has completed (~5 min):
+
+```bash
+# Connect via SSM Session Manager (recommended — no open ports needed)
+aws ssm start-session --target <instance-id>
+
+# Or connect via SSH if key_name / AllowedSshCidr was set
+ssh -i my-key.pem ubuntu@<private-ip>
+
+# Install AIDome
+curl -fsSL https://your-bucket/aidome.sh | sudo bash
+```
+
+---
+
+## Security notes
+
+- **SSM Session Manager is preferred** over SSH for private-subnet access. No bastion host or open inbound ports needed; access is IAM-controlled and logged to CloudTrail.
+- Restrict `allowed_ssh_cidr` / `AllowedSshCidr` to the narrowest practical range.
+- Review and tighten egress rules before production use.
+- To enable IP forwarding for future VPN use, uncomment the `ip_forward` lines in `scripts/cloud-init.yaml` under `/etc/sysctl.d/99-aidome-security.conf`.
