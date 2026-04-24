@@ -1,4 +1,4 @@
-# Blueprint 01: AWS EC2 – Single-Node Prerequisites — Single Node
+# Blueprint 01: AWS EC2 – Single-Node Prerequisites
 
 > **Scope — Infrastructure Prerequisites Only**
 > This blueprint sets up the EC2 server environment: OS hardening, Docker Engine, firewall rules,
