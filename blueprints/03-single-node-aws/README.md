@@ -1,18 +1,21 @@
 # Blueprint 03 · Single-Node – AWS Greenfield
 
-> 🚧 **This blueprint is Coming Soon.** For an available AWS deployment path, use
-> [Blueprint 02 – AWS EC2 (Bring Your Own VPC)](../02-aws-ec2/README.md).
+> 📬 **Self-service documentation for this blueprint is not yet published here.**
+> The deployment is **fully supported and operational today** — contact your AIdome
+> account team to get started.
 
 ---
 
-## What this blueprint will do
+## Overview
 
 Blueprint 03 provisions a **complete AWS environment from scratch** using a single
-Terraform root module — no pre-existing VPC or networking required. It is the right
-choice for customers who are starting fresh on AWS and want AIdome running on a single
-node without manually wiring up networking.
+Terraform root module. Unlike [Blueprint 02](../02-aws-ec2/README.md), no pre-existing
+VPC or networking is required — everything is created and managed by this blueprint.
 
-Planned infrastructure:
+It is the right choice for customers who are starting fresh on AWS and want AIdome
+running on a single node without manually wiring up networking.
+
+## What it provisions
 
 | Resource | Detail |
 |---|---|
@@ -26,7 +29,7 @@ Planned infrastructure:
 
 ---
 
-## Difference from Blueprint 02
+## How it differs from Blueprint 02
 
 | | Blueprint 02 | Blueprint 03 |
 |---|---|---|
@@ -43,12 +46,4 @@ As with all AIdome blueprints, the AIdome registry (`images.aidome.co`) is
 access-controlled. Product installation is performed by the AIdome team using
 `aidome.sh` together with customer-specific credentials — it is not self-service.
 Contact your AIdome account team to schedule the installation step.
-
----
-
-## Interim option
-
-Until this blueprint is available, use [Blueprint 02](../02-aws-ec2/README.md) with a
-manually created (or existing) VPC and private subnet. Blueprint 02 is fully production
-ready today.
 

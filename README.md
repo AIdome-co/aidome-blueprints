@@ -11,9 +11,9 @@
 |---|-----------|--------|-----------|-------|----|----------|
 | 01 | [Quickstart – Local](blueprints/01-quickstart-local/README.md) | ✅ Available | ⭐ Beginner | None (laptop) | ❌ | Evaluation / development |
 | 02 | [AWS EC2 – Bring Your Own VPC](blueprints/02-aws-ec2/README.md) | ✅ Available | ⭐⭐ Intermediate | AWS | ❌ | Harden and prepare an EC2 instance in your existing VPC for AIdome installation |
-| 03 | [Single-Node – AWS Greenfield](blueprints/03-single-node-aws/README.md) | 🚧 Coming Soon | ⭐⭐ Intermediate | AWS | ❌ | Full AWS infrastructure from scratch (VPC, subnets, NAT, EC2) — for customers with no existing AWS footprint |
-| 04 | [HA Kubernetes](blueprints/04-ha-kubernetes/README.md) | 🚧 Coming Soon | ⭐⭐⭐ Advanced | AWS / GCP / Azure | ✅ | Production workloads requiring high availability and horizontal scale |
-| 05 | [Air-Gapped](blueprints/05-air-gapped/README.md) | 🚧 Coming Soon | ⭐⭐⭐⭐ Expert | On-prem / private cloud | ✅ | Regulated / offline environments with no internet access |
+| 03 | [Single-Node – AWS Greenfield](blueprints/03-single-node-aws/README.md) | 📬 Docs pending — contact us | ⭐⭐ Intermediate | AWS | ❌ | Full AWS infrastructure from scratch (VPC, subnets, NAT, EC2) — for customers with no existing AWS footprint |
+| 04 | [HA Kubernetes](blueprints/04-ha-kubernetes/README.md) | 📬 Docs pending — contact us | ⭐⭐⭐ Advanced | AWS / GCP / Azure | ✅ | Production workloads requiring high availability and horizontal scale |
+| 05 | [Air-Gapped](blueprints/05-air-gapped/README.md) | 📬 Docs pending — contact us | ⭐⭐⭐⭐ Expert | On-prem / private cloud | ✅ | Regulated / offline environments with no internet access |
 
 ---
 
@@ -109,7 +109,7 @@ provides credentials and the `aidome.sh` installer to complete the product insta
 
 **File:** [`blueprints/03-single-node-aws/README.md`](blueprints/03-single-node-aws/README.md)
 
-> 🚧 **Coming Soon** — Use [Blueprint 02](blueprints/02-aws-ec2/README.md) in the meantime.
+> 📬 **Self-service docs not yet published.** This deployment is fully supported today — contact your AIdome account team.
 
 Provisions a complete AWS environment from scratch — VPC, private subnets, route tables,
 NAT Gateway, and a hardened EC2 instance — using a single Terraform root module. Designed
@@ -125,7 +125,7 @@ As with Blueprint 02, product installation requires AIdome-provided credentials 
 
 **File:** [`blueprints/04-ha-kubernetes/README.md`](blueprints/04-ha-kubernetes/README.md)
 
-> 🚧 **Coming Soon** — Use [Blueprint 02](blueprints/02-aws-ec2/README.md) for a non-HA AWS deployment in the meantime.
+> 📬 **Self-service docs not yet published.** This deployment is fully supported today — contact your AIdome account team.
 
 Highly-available, multi-replica deployment on Kubernetes (EKS / GKE / AKS).
 Includes Terraform for cluster infrastructure and Helm charts for the AIdome application
@@ -138,12 +138,12 @@ upgrades.
 
 **File:** [`blueprints/05-air-gapped/README.md`](blueprints/05-air-gapped/README.md)
 
-> 🚧 **Coming Soon** — Contact [support@aidome.co](mailto:support@aidome.co) to discuss air-gapped installation requirements.
+> 📬 **Self-service docs not yet published.** This deployment is fully supported today — contact [support@aidome.co](mailto:support@aidome.co) to discuss requirements.
 
 Deploy AIdome in a fully isolated, internet-free environment using Ansible.
 Designed for regulated industries (defense, finance, healthcare) and on-premises
 private-cloud setups where outbound internet access is not permitted. Requires
-pre-staged artefacts (container images, packages) delivered by the AIdome team.
+pre-staged artifacts (container images, packages) delivered by the AIdome team.
 
 ---
 

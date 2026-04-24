@@ -1,11 +1,12 @@
 # Blueprint 05 · Air-Gapped
 
-> 🚧 **This blueprint is Coming Soon.** For air-gapped installation requirements,
-> contact [support@aidome.co](mailto:support@aidome.co) directly.
+> 📬 **Self-service documentation for this blueprint is not yet published here.**
+> The deployment is **fully supported and operational today** — contact
+> [support@aidome.co](mailto:support@aidome.co) to discuss your air-gapped requirements.
 
 ---
 
-## What this blueprint will do
+## Overview
 
 Blueprint 05 deploys AIdome in a **fully isolated, internet-free environment** using
 Ansible. All artifacts — container images, OS packages, and configuration — are
@@ -33,13 +34,4 @@ performed with AIdome team involvement.
 
 To discuss an air-gapped deployment, contact [support@aidome.co](mailto:support@aidome.co)
 with your target platform, OS, and network topology details.
-
----
-
-## Interim option
-
-If you have controlled internet access (e.g., a proxy allowlist or temporary outbound
-window), [Blueprint 02](../02-aws-ec2/README.md) can be adapted for on-premises hosts.
-Reach out to the AIdome team for guidance on proxy configuration and offline image
-loading.
 
