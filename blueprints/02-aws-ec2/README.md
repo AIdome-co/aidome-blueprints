@@ -43,8 +43,8 @@
   │   └─────────────────────────────────────────────┘  │
   │                                                     │
   │   ┌─────────────────────────────────────────────┐  │
-  │   │  NAT Gateway / VPC Endpoints (existing infra)│  │
-  │   │  Required for: apt, Docker Hub, SSM, aidome  │  │
+  │   │ NAT Gateway / VPC Endpoints (existing infra)│  │
+  │   │ Required for: apt, Docker Hub, SSM, aidome  │  │
   │   └─────────────────────────────────────────────┘  │
   └─────────────────────────────────────────────────────┘
          │
@@ -69,8 +69,8 @@
 
 | Component | Notes |
 |---|---|
-| SSH hardening | Port 22 only; root login disabled; password auth off |
-| iptables firewall | IPv4 + IPv6; SSH open; HTTPS from RFC1918 only |
+| SSH hardening | Port 22 only; root login disabled; password auth off; pre-auth banner (`/etc/issue.net`, CIS 5.2.18) |
+| iptables firewall | IPv4 + IPv6; SSH open; HTTPS from RFC1918 only; `DOCKER-USER` chain filters container traffic (RFC1918 only) |
 | fail2ban | 5 retries, 1-hour ban, SSH port 22 |
 | Docker Engine | Installed via official APT repository + GPG verification |
 | AWS SSM Agent | Enables SSM Session Manager (no bastion host required) |
@@ -104,14 +104,18 @@ module "aidome_ec2" {
   ami_id            = "ami-xxxxxxxx"  # Ubuntu 24.04 LTS (Noble)
 
   # Recommended: attach an IAM profile with AmazonSSMManagedInstanceCore
+  # (add CloudWatchAgentServerPolicy to the same role to enable metrics/log shipping)
   iam_instance_profile_name = "aidome-ssm-profile"
 
-  # Optional: allow SSH from internal CIDR (SSM Session Manager is preferred)
+  # Optional: allow SSH from an internal CIDR (SSM Session Manager is preferred)
   allowed_ssh_cidr = "10.0.0.0/8"
-  key_name         = "my-key"
+  key_name         = "my-key-pair"
 
   instance_type    = "t3.small"
   root_volume_size = 30
+
+  # Optional: customer-managed KMS key for the EBS root volume
+  # kms_key_id = "arn:aws:kms:us-east-1:123456789012:key/mrk-xxxxxxxx"
 
   tags = {
     Environment = "dev"
@@ -119,6 +123,8 @@ module "aidome_ec2" {
   }
 }
 ```
+
+A ready-to-edit [`terraform.tfvars.example`](terraform/terraform.tfvars.example) is provided alongside the module. See [`variables.tf`](terraform/variables.tf) for the full list of inputs and [`outputs.tf`](terraform/outputs.tf) for the exposed outputs (`instance_id`, `private_ip`, `security_group_id`).
 
 ### CloudFormation
 
@@ -151,9 +157,39 @@ aws ssm start-session --target <instance-id>
 # Or connect via SSH if key_name / AllowedSshCidr was set
 ssh -i my-key.pem aidome-ops@<private-ip>
 
+# Confirm cloud-init finished successfully before proceeding
+cloud-init status --wait
+cat /var/log/cloud-init-output.log | tail -n 20   # optional sanity check
+
 # Install AIDome
 curl -fsSL https://your-bucket/aidome.sh | sudo bash
+
+# Alternative (recommended for stricter environments — download, inspect, then run):
+#   curl -fsSLO https://your-bucket/aidome.sh
+#   less aidome.sh
+#   sudo bash aidome.sh
 ```
+
+---
+
+## Validation
+
+Run these from the repository root before opening a PR that touches this blueprint:
+
+```bash
+# Terraform
+terraform -chdir=blueprints/02-aws-ec2/terraform fmt -check -recursive
+terraform -chdir=blueprints/02-aws-ec2/terraform init -backend=false
+terraform -chdir=blueprints/02-aws-ec2/terraform validate
+
+# CloudFormation
+cfn-lint blueprints/02-aws-ec2/cloudformation/ec2-private.yaml
+
+# cloud-init YAML
+yamllint blueprints/02-aws-ec2/scripts/cloud-init.yaml
+```
+
+CI runs the equivalent checks in [`.github/workflows/validate.yml`](../../.github/workflows/validate.yml).
 
 ---
 
@@ -163,7 +199,7 @@ curl -fsSL https://your-bucket/aidome.sh | sudo bash
 - Restrict `allowed_ssh_cidr` / `AllowedSshCidr` to the narrowest practical range.
 - **VPC endpoints for SSM**: if the subnet has no NAT Gateway, create VPC Interface Endpoints for `ssm`, `ssmmessages`, and `ec2messages` to allow the SSM Agent to reach AWS APIs without internet access.
 - Host iptables accept SSH from any source by default (defense-in-depth; the primary perimeter is the AWS Security Group). For stricter hosts, tighten the `INPUT` SSH rule to match your `allowed_ssh_cidr` after provisioning.
-- **CloudWatch Agent** is installed automatically. To activate metrics and log shipping, attach a IAM role policy with `CloudWatchAgentServerPolicy` to the instance profile.
+- **CloudWatch Agent** is installed automatically. To activate metrics and log shipping, attach the `CloudWatchAgentServerPolicy` managed policy to the instance profile (alongside `AmazonSSMManagedInstanceCore`).
 - **Customer-managed KMS key**: pass `kms_key_id` (Terraform) or `KmsKeyId` (CloudFormation) to encrypt the EBS volume with your own key instead of the default AWS managed key.
 - Review and tighten egress rules before production use.
 - To enable IP forwarding for future VPN use, uncomment the `ip_forward` lines in `scripts/cloud-init.yaml` under `/etc/sysctl.d/99-aidome-security.conf`.
