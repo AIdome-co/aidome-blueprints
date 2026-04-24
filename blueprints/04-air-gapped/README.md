@@ -1,4 +1,4 @@
-# Blueprint 05 · Air-Gapped
+# Blueprint 04 · Air-Gapped
 
 > 📬 **Self-service documentation for this blueprint is not yet published here.**
 > The deployment is **fully supported and operational today** — contact
@@ -8,7 +8,7 @@
 
 ## Overview
 
-Blueprint 05 deploys AIdome in a **fully isolated, internet-free environment** using
+Blueprint 04 deploys AIdome in a **fully isolated, internet-free environment** using
 Ansible. All artifacts — container images, OS packages, and configuration — are
 pre-staged and delivered by the AIdome team before installation begins.
 

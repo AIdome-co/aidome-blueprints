@@ -48,12 +48,12 @@ This skill generates conventional commit messages following the [Conventional Co
 
 ```
 feat(02-aws-ec2): add KMS key for EBS encryption
-fix(03-single-node-aws): correct subnet CIDR calculation
-docs(04-ha-kubernetes): update Helm values reference table
+fix(02-aws-ec2): correct subnet CIDR calculation
+docs(03-ha-kubernetes): update Helm values reference table
 chore(deps): pin terraform aws provider to 5.50.0
 ci(validate): add tfsec security scan to PR workflow
 refactor(shared/terraform-modules): extract vpc into reusable module
-feat(05-air-gapped): add ansible role for docker hardening
+feat(04-air-gapped): add ansible role for docker hardening
 ```
 
 ### Validation

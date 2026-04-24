@@ -42,8 +42,8 @@ aidome-blueprints/
 ├── blueprints/
 │   ├── 01-quickstart-local/          ← docker-compose.yml
 │   ├── 02-aws-ec2/                   ← terraform/, cloudformation/, scripts/
-│   ├── 04-ha-kubernetes/             ← terraform/, helm/
-│   └── 05-air-gapped/                ← ansible/
+│   ├── 03-ha-kubernetes/             ← terraform/, helm/
+│   └── 04-air-gapped/                ← ansible/
 ├── shared/
 │   ├── terraform-modules/            ← Reusable TF modules
 │   └── scripts/                      ← Shared shell scripts
@@ -92,7 +92,7 @@ These apply to **every** change, regardless of which blueprint you are editing.
 
 Run these locally before opening a PR. They must all succeed.
 
-### Terraform (blueprints 02, 03, 04; shared/terraform-modules)
+### Terraform (blueprints 02 and 03; shared/terraform-modules)
 ```bash
 terraform fmt -check -recursive .
 terraform init -backend=false
@@ -101,7 +101,7 @@ tflint --recursive             # optional but recommended
 tfsec . || checkov -d .        # security scan (pick one)
 ```
 
-### Ansible (blueprint 05)
+### Ansible (blueprint 04)
 ```bash
 yamllint .
 ansible-lint
@@ -115,10 +115,10 @@ cfn-lint blueprints/02-aws-ec2/cloudformation/*.yaml
 aws cloudformation validate-template --template-body file://...
 ```
 
-### Kubernetes / Helm (blueprint 04)
+### Kubernetes / Helm (blueprint 03)
 ```bash
-helm lint blueprints/04-ha-kubernetes/helm/<chart>
-helm template blueprints/04-ha-kubernetes/helm/<chart> | kubeconform -strict
+helm lint blueprints/03-ha-kubernetes/helm/<chart>
+helm template blueprints/03-ha-kubernetes/helm/<chart> | kubeconform -strict
 ```
 
 ### Shell scripts (`shared/scripts/`, `blueprints/*/scripts/`)
@@ -146,7 +146,7 @@ These files live in [`.github/instructions/`](.github/instructions/). Agents tha
 |------|-----------|--------|
 | `terraform.instructions.md` | `**/*.tf` | [github/awesome-copilot](https://github.com/github/awesome-copilot) |
 | `ansible.instructions.md` | `**/*.yaml, **/*.yml` (Ansible playbooks/roles) | github/awesome-copilot |
-| `kubernetes-manifests.instructions.md` | `blueprints/04-ha-kubernetes/helm/**`, `k8s/**`, `manifests/**` | github/awesome-copilot |
+| `kubernetes-manifests.instructions.md` | `blueprints/03-ha-kubernetes/helm/**`, `k8s/**`, `manifests/**` | github/awesome-copilot |
 | `cloudformation.instructions.md` | `**/cloudformation/**/*.yaml`, `**/cloudformation/**/*.yml` | custom (this repo) |
 | `shell.instructions.md` | `**/*.sh` | github/awesome-copilot |
 | `markdown.instructions.md` | `**/*.md` | github/awesome-copilot |
@@ -188,7 +188,7 @@ Custom agents live in [`.github/agents/`](.github/agents/). Use them in Copilot 
 | `terraform-iac-reviewer.agent.md` | Reviews Terraform for state safety, security, modular design, and plan/apply discipline |
 | `devops-expert.agent.md` | Full DevOps lifecycle guidance (Plan → Code → Build → Test → Release → Deploy → Operate → Monitor) |
 | `github-actions-expert.agent.md` | GitHub Actions CI/CD security (action pinning, OIDC, least privilege, supply-chain safety) |
-| `platform-sre-kubernetes.agent.md` | Kubernetes SRE for Blueprint 04: reliable rollouts, security defaults, health probes, PDBs |
+| `platform-sre-kubernetes.agent.md` | Kubernetes SRE for Blueprint 03: reliable rollouts, security defaults, health probes, PDBs |
 | `se-security-reviewer.agent.md` | Security code review (OWASP Top 10, Zero Trust, IaC-specific checks) |
 | `se-technical-writer.agent.md` | Technical writing for blueprint READMEs, ADRs, tutorials, and docs |
 

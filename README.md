@@ -10,9 +10,9 @@
 | # | Blueprint | Status | Complexity | Cloud | HA | Use-case |
 |---|-----------|--------|-----------|-------|----|----------|
 | 01 | [Quickstart – Local](blueprints/01-quickstart-local/README.md) | 📬 Docs pending — contact us | ⭐ Beginner | None (laptop) | ❌ | Evaluation / development |
-| 02 | [AWS EC2 – Single Node](blueprints/02-aws-ec2/README.md) | ✅ Available | ⭐⭐ Intermediate | AWS | ❌ | Single hardened EC2 instance — bring your own VPC **or** let Terraform create full networking from scratch |
-| 03 | [HA Kubernetes](blueprints/04-ha-kubernetes/README.md) | 📬 Docs pending — contact us | ⭐⭐⭐ Advanced | AWS / GCP / Azure | ✅ | Production workloads requiring high availability and horizontal scale |
-| 04 | [Air-Gapped](blueprints/05-air-gapped/README.md) | 📬 Docs pending — contact us | ⭐⭐⭐⭐ Expert | On-prem / private cloud | ✅ | Regulated / offline environments with no internet access |
+| 02 | [AWS EC2 – Single Node](blueprints/02-aws-ec2/README.md) | ✅ Available | ⭐⭐ Intermediate | AWS | ❌ | Single hardened EC2 instance — bring your own VPC |
+| 03 | [HA Kubernetes](blueprints/03-ha-kubernetes/README.md) | 📬 Docs pending — contact us | ⭐⭐⭐ Advanced | AWS / GCP / Azure | ✅ | Production workloads requiring high availability and horizontal scale |
+| 04 | [Air-Gapped](blueprints/04-air-gapped/README.md) | 📬 Docs pending — contact us | ⭐⭐⭐⭐ Expert | On-prem / private cloud | ✅ | Regulated / offline environments with no internet access |
 
 ---
 
@@ -36,12 +36,12 @@ aidome-blueprints/
 │   │   ├── cloudformation/
 │   │   ├── scripts/
 │   │   └── terraform/
-│   ├── 04-ha-kubernetes/
+│   ├── 03-ha-kubernetes/
 │   │   ├── README.md
 │   │   ├── architecture.png
 │   │   ├── terraform/
 │   │   └── helm/
-│   └── 05-air-gapped/
+│   └── 04-air-gapped/
 │       ├── README.md
 │       └── ansible/
 ├── shared/
@@ -91,13 +91,7 @@ Provision a hardened, private-subnet EC2 instance on AWS.
 Cloud-init bootstraps SSH hardening, iptables, fail2ban, Docker Engine, the AWS SSM Agent,
 and a dedicated operator user on first boot. Once the instance is ready, the AIdome team
 provides credentials and the `aidome.sh` installer to complete the product installation.
-
-This blueprint supports two modes controlled by a single Terraform variable:
-
-| Mode | When to use | What Terraform creates |
-|------|-------------|------------------------|
-| **Bring Your Own VPC** (`create_vpc = false`, default) | You already have an AWS VPC, subnets, and routing in place | EC2 instance + security group only |
-| **Greenfield** (`create_vpc = true`) | Starting fresh on AWS with no existing VPC | Full network stack (VPC, public + private subnets, Internet Gateway, NAT Gateway, route tables) **plus** EC2 instance + security group |
+Requires an existing AWS VPC and private subnet (Bring Your Own VPC).
 
 **Key files:**
 - [`terraform/`](blueprints/02-aws-ec2/terraform/)
@@ -108,7 +102,7 @@ This blueprint supports two modes controlled by a single Terraform variable:
 
 ### 03 · HA Kubernetes
 
-**File:** [`blueprints/04-ha-kubernetes/README.md`](blueprints/04-ha-kubernetes/README.md)
+**File:** [`blueprints/03-ha-kubernetes/README.md`](blueprints/03-ha-kubernetes/README.md)
 
 > 📬 **Self-service docs not yet published.** This deployment is fully supported today — contact your AIdome account team.
 
@@ -121,7 +115,7 @@ upgrades.
 
 ### 04 · Air-Gapped
 
-**File:** [`blueprints/05-air-gapped/README.md`](blueprints/05-air-gapped/README.md)
+**File:** [`blueprints/04-air-gapped/README.md`](blueprints/04-air-gapped/README.md)
 
 > 📬 **Self-service docs not yet published.** This deployment is fully supported today — contact [support@aidome.co](mailto:support@aidome.co) to discuss requirements.
 
