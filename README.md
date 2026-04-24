@@ -9,7 +9,7 @@
 
 | # | Blueprint | Status | Complexity | Cloud | HA | Use-case |
 |---|-----------|--------|-----------|-------|----|----------|
-| 01 | [Quickstart – Local](blueprints/01-quickstart-local/README.md) | ✅ Available | ⭐ Beginner | None (laptop) | ❌ | Evaluation / development |
+| 01 | [Quickstart – Local](blueprints/01-quickstart-local/README.md) | 📬 Docs pending — contact us | ⭐ Beginner | None (laptop) | ❌ | Evaluation / development |
 | 02 | [AWS EC2 – Bring Your Own VPC](blueprints/02-aws-ec2/README.md) | ✅ Available | ⭐⭐ Intermediate | AWS | ❌ | Harden and prepare an EC2 instance in your existing VPC for AIdome installation |
 | 03 | [Single-Node – AWS Greenfield](blueprints/03-single-node-aws/README.md) | 📬 Docs pending — contact us | ⭐⭐ Intermediate | AWS | ❌ | Full AWS infrastructure from scratch (VPC, subnets, NAT, EC2) — for customers with no existing AWS footprint |
 | 04 | [HA Kubernetes](blueprints/04-ha-kubernetes/README.md) | 📬 Docs pending — contact us | ⭐⭐⭐ Advanced | AWS / GCP / Azure | ✅ | Production workloads requiring high availability and horizontal scale |
@@ -76,6 +76,8 @@ aidome-blueprints/
 ### 01 · Quickstart – Local
 
 **File:** [`blueprints/01-quickstart-local/README.md`](blueprints/01-quickstart-local/README.md)
+
+> 📬 **Self-service docs not yet published.** This deployment is fully supported today — contact your AIdome account team.
 
 Spin up the full AIdome stack on a single laptop using Docker Compose.  
 No cloud account required—ideal for first-time evaluation and local development.
