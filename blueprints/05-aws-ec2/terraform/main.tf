@@ -16,7 +16,7 @@ locals {
 
 resource "aws_security_group" "vm_private_sg" {
   name_prefix = "${var.name_prefix}-private-"
-  description = "Dev VM private-subnet security group"
+  description = "AIDome EC2 private-subnet security group"
   vpc_id      = var.vpc_id
 
   egress {

@@ -1,6 +1,6 @@
 #cloud-config
 #
-# AIDome Dev VM Cloud-Init Configuration
+# AIDome EC2 Cloud-Init Configuration
 # ==========================================
 # This cloud-init configuration sets up a secure EC2 instance for AIDome with:
 # - Hardened SSH configuration (port 22)
@@ -22,8 +22,8 @@
 # ==========================================
 
 preserve_hostname: false
-hostname: aidome-dev-vm
-fqdn: aidome-dev-vm.local
+hostname: aidome-ec2
+fqdn: aidome-ec2.local
 ssh_pwauth: false
 
 # Timezone configuration
@@ -97,7 +97,7 @@ write_files:
     owner: root:root
     content: |
       ******************************************************************
-      *                     AIDome Dev VM System                      *
+      *                     AIDome EC2 System                      *
       *                                                                *
       *  WARNING: Unauthorized access is prohibited and will be       *
       *  prosecuted to the full extent of the law.                    *
@@ -111,11 +111,11 @@ write_files:
     owner: root:root
     content: |
 
-      Welcome to AIDome Dev VM
+      Welcome to AIDome EC2
       ========================
 
       System Information:
-      - Hostname: aidome-dev-vm
+      - Hostname: aidome-ec2
       - Docker: Docker Engine (rootful)
       - SSM Agent: enabled (use SSM Session Manager for keyless access)
 
@@ -191,7 +191,7 @@ write_files:
 
       [DEFAULT]
       destemail = root@localhost
-      sender = fail2ban@aidome-dev-vm
+      sender = fail2ban@aidome-ec2
       action = %(action_)s
 
   # IPv4 firewall — SSH on port 22 + HTTPS from RFC1918
@@ -270,7 +270,7 @@ packages:
   - unattended-upgrades
 
 runcmd:
-  - 'echo "### AIDome Dev VM Bootstrap Starting..."'
+  - 'echo "### AIDome EC2 Bootstrap Starting..."'
   - 'echo "Start time: $(date)"'
 
   # Apply sysctl
@@ -345,12 +345,12 @@ runcmd:
   - 'echo "### Cloud-init completed. Instance is ready."'
   - 'echo "### Connect via SSH or SSM Session Manager, then run the AIDome installer (obtain URL from your AIDome account or support team)."'
 
-final_message: "AIDome Dev VM setup completed at $TIMESTAMP after $UPTIME seconds. Connect and run aidome.sh to install AIDome."
+final_message: "AIDome EC2 setup completed at $TIMESTAMP after $UPTIME seconds. Connect and run aidome.sh to install AIDome."
 
 # Reboot the VM after cloud-init completes to ensure all kernel/network settings are applied
 power_state:
   delay: 1
   mode: reboot
-  message: "Rebooting to complete AIDome Dev VM setup..."
+  message: "Rebooting to complete AIDome EC2 setup..."
   timeout: 30
   condition: true

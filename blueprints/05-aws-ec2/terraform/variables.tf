@@ -1,7 +1,7 @@
 variable "name_prefix" {
   description = "Name prefix for created resources"
   type        = string
-  default     = "dev-vm"
+  default     = "aidome-ec2"
 }
 
 variable "vpc_id" {
@@ -10,12 +10,12 @@ variable "vpc_id" {
 }
 
 variable "private_subnet_id" {
-  description = "Private subnet ID for the dev VM"
+  description = "Private subnet ID for the EC2 instance"
   type        = string
 }
 
 variable "ami_id" {
-  description = "AMI ID for the dev VM (Ubuntu 22.04 LTS recommended)"
+  description = "AMI ID for the EC2 instance (Ubuntu 22.04 LTS recommended)"
   type        = string
 }
 

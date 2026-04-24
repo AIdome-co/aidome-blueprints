@@ -4,7 +4,7 @@ Description: AIDome dev EC2 instance in a private subnet
 Parameters:
   NamePrefix:
     Type: String
-    Default: dev-vm
+    Default: aidome-ec2
     Description: Name prefix for created resources
 
   VpcId:
@@ -13,11 +13,11 @@ Parameters:
 
   PrivateSubnetId:
     Type: AWS::EC2::Subnet::Id
-    Description: Private subnet ID for the dev VM
+    Description: Private subnet ID for the EC2 instance
 
   AmiId:
     Type: AWS::EC2::Image::Id
-    Description: AMI ID for the dev VM (Ubuntu 22.04 LTS recommended)
+    Description: AMI ID for the EC2 instance (Ubuntu 22.04 LTS recommended)
 
   InstanceType:
     Type: String
@@ -86,7 +86,7 @@ Resources:
   VmPrivateSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Dev VM private-subnet security group
+      GroupDescription: AIDome EC2 private-subnet security group
       VpcId: !Ref VpcId
       SecurityGroupEgress:
         # Default-open egress; restrict to required CIDRs/endpoints for stricter environments.

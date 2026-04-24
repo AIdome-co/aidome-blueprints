@@ -13,7 +13,7 @@
 | 02 | [Single-Node – AWS](blueprints/02-single-node-aws/README.md) | ⭐⭐ Intermediate | AWS | ❌ | Small teams / PoC |
 | 03 | [HA Kubernetes](blueprints/03-ha-kubernetes/README.md) | ⭐⭐⭐ Advanced | AWS / GCP / Azure | ✅ | Production workloads |
 | 04 | [Air-Gapped](blueprints/04-air-gapped/README.md) | ⭐⭐⭐⭐ Expert | On-prem / private cloud | ✅ | Regulated / offline environments |
-| 05 | [Dev VM – AWS](blueprints/05-dev-vm-aws/README.md) | ⭐⭐ Intermediate | AWS | ❌ | Customer EC2 prep for AIDome installation |
+| 05 | [AWS EC2](blueprints/05-aws-ec2/README.md) | ⭐⭐ Intermediate | AWS | ❌ | Customer EC2 prep for AIDome installation |
 
 ---
 
@@ -42,7 +42,7 @@ aidome-blueprints/
 │   ├── 04-air-gapped/
 │   │   ├── README.md
 │   │   └── ansible/
-│   └── 05-dev-vm-aws/
+│   └── 05-aws-ec2/
 │       ├── README.md
 │       ├── cloudformation/
 │       ├── scripts/
@@ -118,17 +118,17 @@ Designed for regulated industries and on-premises private-cloud setups.
 
 ---
 
-### 05 · Dev VM – AWS
+### 05 · AWS EC2
 
-**File:** [`blueprints/05-dev-vm-aws/README.md`](blueprints/05-dev-vm-aws/README.md)
+**File:** [`blueprints/05-aws-ec2/README.md`](blueprints/05-aws-ec2/README.md)
 
 Provision a hardened, private-subnet EC2 instance that bootstraps itself via cloud-init  
 and is ready for the customer to run `aidome.sh` to install the AIDome product.
 
 **Key files:**
-- [`terraform/`](blueprints/05-dev-vm-aws/terraform/)
-- [`cloudformation/`](blueprints/05-dev-vm-aws/cloudformation/)
-- [`scripts/cloud-init.yaml`](blueprints/05-dev-vm-aws/scripts/cloud-init.yaml)
+- [`terraform/`](blueprints/05-aws-ec2/terraform/)
+- [`cloudformation/`](blueprints/05-aws-ec2/cloudformation/)
+- [`scripts/cloud-init.yaml`](blueprints/05-aws-ec2/scripts/cloud-init.yaml)
 
 ---
 
