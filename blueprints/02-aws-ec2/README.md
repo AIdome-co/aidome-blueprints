@@ -118,23 +118,23 @@ What each cloud-init script installs and configures, per OS.
 
 **Legend:** 🟢 Full &nbsp; 🟡 Partial / conditional &nbsp; 🔴 Not supported / missing
 
-| OS | OS Hardening<br>(sysctl · SSH · fail2ban) | Docker Engine<br>+ Compose | CLI Tools<br>(curl · wget · jq · AWS CLI v2) | Sysprep<br>Cleanup |
-|---|:---:|:---:|:---:|:---:|
-| Ubuntu 24.04 LTS | 🟢 | 🟢 | 🟡 ³ | 🟢 |
-| Ubuntu 22.04 LTS | 🟢 | 🟢 | 🟡 ³ | 🟢 |
-| Debian 12 | 🟢 | 🟢 | 🟡 ³ | 🟢 |
-| CentOS Stream 9 | 🟢 | 🟢 | 🟡 ³ | 🟢 |
-| RHEL 9 | 🟡 ¹ | 🟢 | 🟡 ³ | 🟢 |
-| RHEL 10 | 🟡 ¹ | 🔴 ² | 🟡 ³ | 🟢 |
-| AlmaLinux 9 | 🟢 | 🟢 | 🟡 ³ | 🟢 |
-| Oracle Linux 9 | 🟢 | 🟢 | 🟡 ³ | 🟢 |
-| Rocky Linux 9 | 🟢 | 🟢 | 🟡 ³ | 🟢 |
+| OS | OS Hardening<br>(sysctl · SSH · auditd · fail2ban) | Docker Engine<br>+ Compose | CLI Tools<br>(curl · wget · jq · AWS CLI v2) | iptables<br>Firewall | SSM<br>Agent | CloudWatch<br>Agent | Auto-<br>updates | Package<br>Cleanup |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Ubuntu 24.04 LTS | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 ¹ | 🟢 | 🟢 |
+| Ubuntu 22.04 LTS | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 ¹ | 🟢 | 🟢 |
+| Debian 12 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 ¹ | 🟢 | 🟢 |
+| CentOS Stream 9 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 ¹ | 🟢 | 🟢 |
+| RHEL 9 | 🟡 ² | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 ¹ | 🟢 | 🟢 |
+| RHEL 10 | 🟡 ² | 🔴 ³ | 🟢 | 🟢 | 🟢 | 🟢 ¹ | 🟢 | 🟢 |
+| AlmaLinux 9 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 ¹ | 🟢 | 🟢 |
+| Oracle Linux 9 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 ¹ | 🟢 | 🟢 |
+| Rocky Linux 9 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 ¹ | 🟢 | 🟢 |
 
-> ¹ **fail2ban on RHEL 9 / RHEL 10** requires EPEL. The cloud-init script enables EPEL via `subscription-manager` (CodeReady Builder) and the EPEL release RPM; this step fails silently if the instance has no active RHEL subscription, leaving fail2ban uninstalled. sysctl hardening and SSH hardening are unaffected.
+> ¹ **CloudWatch Agent** — ships data and logs only when the IAM instance profile has `CloudWatchAgentServerPolicy` attached. Agent is installed and started on all OS types; it silently no-ops without the policy.
 >
-> ² **Docker CE on RHEL 10** — Docker Inc. does not yet publish official packages for RHEL 10. The cloud-init Docker install step will fail. Install Podman (pre-installed on RHEL 10) or Docker CE manually using a compatible binary.
+> ² **fail2ban on RHEL 9 / RHEL 10** requires EPEL. The cloud-init script enables EPEL via `subscription-manager` (CodeReady Builder) and the EPEL release RPM; this step fails silently if the instance has no active RHEL subscription, leaving fail2ban uninstalled. sysctl hardening, SSH hardening, and auditd are unaffected.
 >
-> ³ **Partial CLI tools** — `curl` and `wget` are installed by cloud-init. `jq` and `AWS CLI v2` are **not** installed; add them post-boot if required. `openssl` and `tar` are pre-installed on all supported distros and do not need explicit installation.
+> ³ **Docker CE on RHEL 10** — Docker Inc. does not yet publish official packages for RHEL 10. The cloud-init Docker install step will fail. Install Podman (pre-installed on RHEL 10) or Docker CE manually using a compatible binary.
 
 ### AMI lookup commands
 
