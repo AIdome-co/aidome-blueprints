@@ -16,7 +16,7 @@ If you are an AI assistant opening this repo, **read this file first**, then the
 | # | Blueprint | Tooling |
 |---|-----------|---------|
 | 01 | AWS EC2 – Single Node (customer onboarding) | Terraform, CloudFormation, cloud-init |
-| 02 | HA Kubernetes | Terraform + Helm |
+| 02 | Kubernetes | Terraform + Helm |
 | 03 | Air-Gapped | Ansible |
 
 See [`README.md`](README.md) for the blueprint matrix and [`docs/architecture-principles.md`](docs/architecture-principles.md) for shared design decisions.

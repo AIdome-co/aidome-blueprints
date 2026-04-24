@@ -1,7 +1,7 @@
-# Blueprint 02 · HA Kubernetes
+# Blueprint 02 · Kubernetes
 
 > 📬 **Self-service documentation for this blueprint is not yet published here.**
-> The deployment is **fully supported and operational today** — contact your AIdome
+> The deployment is **fully supported** — contact your AIdome
 > account team to get started.
 
 ---
