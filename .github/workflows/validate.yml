@@ -1,0 +1,140 @@
+# Validate — runs on every pull request that touches IaC or scripts.
+#
+# Jobs:
+#   lint-yaml          — yamllint on cloud-init YAML files
+#   validate-cloudinit — cloud-init schema validation
+#   validate-terraform — terraform fmt + init + validate
+#   lint-cfn           — cfn-lint on CloudFormation templates
+#   lint-shell         — shellcheck on .sh files
+#
+# None of these jobs require AWS credentials or spin up real infrastructure;
+# they are purely static-analysis / syntax checks and run in < 5 minutes.
+
+name: Validate
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # --------------------------------------------------------------------------
+  # 1. YAML lint (cloud-init files only; CFN is handled by cfn-lint)
+  # --------------------------------------------------------------------------
+  lint-yaml:
+    name: Lint YAML (cloud-init)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install yamllint
+        run: pip install yamllint==1.38.0
+
+      - name: Lint cloud-init files
+        run: |
+          yamllint -c .yamllint.yml \
+            blueprints/01-aws-ec2/scripts/cloud-init-deb.yaml \
+            blueprints/01-aws-ec2/scripts/cloud-init-rhel.yaml \
+            blueprints/01-aws-ec2/scripts/cloud-init.yaml
+
+  # --------------------------------------------------------------------------
+  # 2. cloud-init schema validation
+  # --------------------------------------------------------------------------
+  validate-cloudinit:
+    name: Validate cloud-init schema
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      # cloud-init is pre-installed on ubuntu-latest GitHub Actions runners.
+      - name: Check cloud-init version
+        run: cloud-init --version
+
+      - name: Validate schema — Debian family
+        run: >-
+          cloud-init schema
+          --config-file blueprints/01-aws-ec2/scripts/cloud-init-deb.yaml
+
+      - name: Validate schema — RHEL family
+        run: >-
+          cloud-init schema
+          --config-file blueprints/01-aws-ec2/scripts/cloud-init-rhel.yaml
+
+      - name: Validate schema — generic
+        run: >-
+          cloud-init schema
+          --config-file blueprints/01-aws-ec2/scripts/cloud-init.yaml
+
+  # --------------------------------------------------------------------------
+  # 3. Terraform fmt + init + validate
+  # --------------------------------------------------------------------------
+  validate-terraform:
+    name: Validate Terraform
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: "1.10.3"
+
+      - name: Terraform fmt check
+        run: terraform fmt -check -recursive blueprints/01-aws-ec2/terraform
+
+      - name: Terraform init (no backend)
+        run: terraform -chdir=blueprints/01-aws-ec2/terraform init -backend=false
+
+      - name: Terraform validate
+        run: terraform -chdir=blueprints/01-aws-ec2/terraform validate
+
+  # --------------------------------------------------------------------------
+  # 4. cfn-lint — CloudFormation template linting
+  # --------------------------------------------------------------------------
+  lint-cfn:
+    name: Lint CloudFormation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install cfn-lint
+        run: pip install cfn-lint==1.49.3
+
+      - name: Run cfn-lint
+        run: cfn-lint blueprints/01-aws-ec2/cloudformation/*.yaml
+
+  # --------------------------------------------------------------------------
+  # 5. ShellCheck — static analysis for shell scripts
+  # --------------------------------------------------------------------------
+  lint-shell:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Run ShellCheck
+        run: |
+          SH_FILES=$(git ls-files '*.sh')
+          if [[ -z "$SH_FILES" ]]; then
+            echo "No .sh files found — nothing to check."
+            exit 0
+          fi
+          # Use --severity=error so pre-existing warnings in third-party hooks
+          # do not block PRs; only outright errors (e.g., SC2006, unquoted vars
+          # in security-sensitive paths) fail the check.
+          # shellcheck disable=SC2086
+          shellcheck --severity=error $SH_FILES
