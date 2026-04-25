@@ -1,0 +1,260 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AIDome EC2 instance in a private subnet — customer onboarding blueprint (multi-OS; Ubuntu 24.04 LTS recommended)
+
+Parameters:
+  NamePrefix:
+    Type: String
+    Default: aidome-ec2
+    Description: Name prefix for created resources
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID where resources are created
+
+  PrivateSubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Private subnet ID for the EC2 instance
+
+  AmiId:
+    Type: AWS::EC2::Image::Id
+    Description: >
+      AMI ID for the EC2 instance. Must match the selected OsType.
+      See README for per-OS AMI lookup commands. Ubuntu 24.04 LTS is recommended.
+
+  OsType:
+    Type: String
+    Default: ubuntu-2404
+    Description: >
+      Operating system type. Used to derive the correct root block device name
+      and to tag the instance for operational clarity.
+      Supply a matching cloud-init script via CloudInitUserData.
+    AllowedValues:
+      - ubuntu-2404
+      - ubuntu-2204
+      - debian-12
+      - centos-9
+      - rhel-9
+      - rhel-10
+      - almalinux-9
+      - oracle-9
+      - rocky-9
+
+  InstanceType:
+    Type: String
+    Default: t3.small
+    Description: EC2 instance type
+
+  KeyName:
+    Type: String
+    Default: ''
+    Description: Optional EC2 key pair name
+
+  IamInstanceProfileName:
+    Type: String
+    Default: ''
+    Description: Optional IAM instance profile name (required for SSM Session Manager access)
+
+  AllowedSshCidr:
+    Type: String
+    Default: ''
+    Description: Optional CIDR allowed to SSH on port 22
+
+  AdditionalSecurityGroupId:
+    Type: String
+    Default: ''
+    Description: Optional additional security group ID to attach to the instance (attach more post-launch via console/CLI if needed)
+
+  RootVolumeSize:
+    Type: Number
+    Default: 30
+    Description: Root EBS volume size in GiB (30 GiB baseline for OS + Docker/workload artifacts; tune per workload)
+
+  KmsKeyId:
+    Type: String
+    Default: ''
+    Description: Optional customer-managed KMS key ID or ARN for EBS encryption (uses the AWS managed key aws/ebs if empty)
+
+  MetadataHopLimit:
+    Type: Number
+    Default: 1
+    Description: IMDSv2 hop limit (use 1 for strongest isolation, increase only if required)
+
+  Environment:
+    Type: String
+    Default: dev
+    Description: Environment tag value
+
+  Project:
+    Type: String
+    Default: aidome
+    Description: Project tag value
+
+  CloudInitUserData:
+    Type: String
+    Default: ''
+    Description: >
+      Override: inline cloud-init content as a full string payload (base64-encoded by the template).
+      Use for air-gapped deployments where the instance cannot reach GitHub at boot time.
+      When this is empty (the default), the template generates a cloud-init #include directive
+      that fetches the appropriate cloud-init YAML from the public GitHub repository at the ref
+      specified by GitRef. Use scripts/cloud-init-deb.yaml for Debian-family OS types and
+      scripts/cloud-init-rhel.yaml for RHEL-family OS types.
+    NoEcho: true
+
+  GitRef:
+    Type: String
+    Default: main
+    Description: >
+      Git ref (branch, tag, or commit SHA) used to build the GitHub raw URL when
+      CloudInitUserData is empty. Pin to a release tag (e.g. v1.2.0) or commit SHA
+      in production to prevent unexpected changes at the next instance launch.
+
+# Root block device name varies by AMI family.
+# Ubuntu 22.04/24.04 and most RHEL-family AMIs use /dev/sda1.
+# Debian 12 official AMIs use /dev/xvda.
+# NOTE: Some newer Nitro-based AMIs (especially RHEL-family) may use /dev/xvda
+# instead of /dev/sda1. Always verify for your chosen AMI with:
+#   aws ec2 describe-images --image-ids <ami-id> \
+#     --query 'Images[0].BlockDeviceMappings[*].DeviceName' --output text
+#
+# IMPORTANT: The keys in OsRootDevice must exactly match the AllowedValues list
+# for the OsType parameter above. When adding a new OS type, update both.
+Mappings:
+  OsRootDevice:
+    ubuntu-2404:
+      DeviceName: /dev/sda1
+    ubuntu-2204:
+      DeviceName: /dev/sda1
+    debian-12:
+      DeviceName: /dev/xvda
+    centos-9:
+      DeviceName: /dev/sda1
+    rhel-9:
+      DeviceName: /dev/sda1
+    rhel-10:
+      DeviceName: /dev/sda1
+    almalinux-9:
+      DeviceName: /dev/sda1
+    oracle-9:
+      DeviceName: /dev/sda1
+    rocky-9:
+      DeviceName: /dev/sda1
+
+  # Maps each OsType to its cloud-init script filename.
+  # Used to auto-construct the GitHub raw URL when CloudInitUserData is empty.
+  OsFamily:
+    ubuntu-2404:
+      CloudInitScript: cloud-init-deb.yaml
+    ubuntu-2204:
+      CloudInitScript: cloud-init-deb.yaml
+    debian-12:
+      CloudInitScript: cloud-init-deb.yaml
+    centos-9:
+      CloudInitScript: cloud-init-rhel.yaml
+    rhel-9:
+      CloudInitScript: cloud-init-rhel.yaml
+    rhel-10:
+      CloudInitScript: cloud-init-rhel.yaml
+    almalinux-9:
+      CloudInitScript: cloud-init-rhel.yaml
+    oracle-9:
+      CloudInitScript: cloud-init-rhel.yaml
+    rocky-9:
+      CloudInitScript: cloud-init-rhel.yaml
+
+Conditions:
+  HasKeyName: !Not [!Equals [!Ref KeyName, '']]
+  HasInstanceProfile: !Not [!Equals [!Ref IamInstanceProfileName, '']]
+  HasAllowedSshCidr: !Not [!Equals [!Ref AllowedSshCidr, '']]
+  HasCloudInitUserData: !Not [!Equals [!Ref CloudInitUserData, '']]
+  HasAdditionalSg: !Not [!Equals [!Ref AdditionalSecurityGroupId, '']]
+  HasKmsKeyId: !Not [!Equals [!Ref KmsKeyId, '']]
+
+Resources:
+  VmPrivateSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: AIDome EC2 private-subnet security group
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        # Default-open egress; restrict to required CIDRs/endpoints for stricter environments.
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: -1
+          CidrIpv6: ::/0
+      Tags:
+        - Key: Name
+          Value: !Sub '${NamePrefix}-private-sg'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref Project
+
+  VmSshIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: HasAllowedSshCidr
+    Properties:
+      GroupId: !Ref VmPrivateSecurityGroup
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      CidrIp: !Ref AllowedSshCidr
+      Description: Optional SSH access from provided CIDR
+
+  VmInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AmiId
+      InstanceType: !Ref InstanceType
+      KeyName: !If [HasKeyName, !Ref KeyName, !Ref 'AWS::NoValue']
+      IamInstanceProfile: !If [HasInstanceProfile, !Ref IamInstanceProfileName, !Ref 'AWS::NoValue']
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          AssociatePublicIpAddress: false
+          SubnetId: !Ref PrivateSubnetId
+          GroupSet: !If
+            - HasAdditionalSg
+            - - !Ref VmPrivateSecurityGroup
+              - !Ref AdditionalSecurityGroupId
+            - - !Ref VmPrivateSecurityGroup
+      UserData: !If
+        - HasCloudInitUserData
+        - Fn::Base64: !Ref CloudInitUserData
+        - Fn::Base64:
+            Fn::Sub:
+              - "#include\nhttps://raw.githubusercontent.com/AIdome-co/aidome-blueprints/${GitRef}/blueprints/01-aws-ec2/scripts/${CloudInitScript}\n"
+              - CloudInitScript: !FindInMap [OsFamily, !Ref OsType, CloudInitScript]
+      BlockDeviceMappings:
+        - DeviceName: !FindInMap [OsRootDevice, !Ref OsType, DeviceName]
+          Ebs:
+            VolumeSize: !Ref RootVolumeSize
+            VolumeType: gp3
+            Encrypted: true
+            KmsKeyId: !If [HasKmsKeyId, !Ref KmsKeyId, !Ref 'AWS::NoValue']
+      MetadataOptions:
+        HttpEndpoint: enabled
+        # Require IMDSv2.
+        HttpTokens: required
+        HttpPutResponseHopLimit: !Ref MetadataHopLimit
+      Tags:
+        - Key: Name
+          Value: !Sub '${NamePrefix}-private-vm'
+        - Key: OsType
+          Value: !Ref OsType
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref Project
+
+Outputs:
+  InstanceId:
+    Description: ID of the private VM instance
+    Value: !Ref VmInstance
+
+  PrivateIp:
+    Description: Private IP of the VM instance
+    Value: !GetAtt VmInstance.PrivateIp
+
+  SecurityGroupId:
+    Description: Security group ID attached to the VM instance
+    Value: !Ref VmPrivateSecurityGroup

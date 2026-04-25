@@ -1,0 +1,122 @@
+# terraform.tfvars.example
+#
+# Copy this file to terraform.tfvars and fill in your values.
+# Never commit terraform.tfvars to version control — it may contain sensitive data.
+#
+# Required variables (no defaults — must be provided):
+vpc_id            = "vpc-xxxxxxxx"
+private_subnet_id = "subnet-xxxxxxxx"
+
+# Operating system selection — drives cloud-init template and AMI choice.
+# Supported values: ubuntu-2404 (recommended), ubuntu-2204, debian-12,
+#                   centos-9, rhel-9, rhel-10, almalinux-9, oracle-9, rocky-9
+os_type = "ubuntu-2404"
+
+# AMI ID — must match the selected os_type.
+# Find the latest AMI for each OS using the lookup commands below.
+#
+# Ubuntu 24.04 LTS (Noble) — recommended
+#   aws ec2 describe-images \
+#     --owners 099720109477 \
+#     --filters 'Name=name,Values=ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*' \
+#               'Name=state,Values=available' \
+#     --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+#
+# Ubuntu 22.04 LTS (Jammy)
+#   aws ec2 describe-images \
+#     --owners 099720109477 \
+#     --filters 'Name=name,Values=ubuntu/images/hvm-ssd-gp3/ubuntu-jammy-22.04-amd64-server-*' \
+#               'Name=state,Values=available' \
+#     --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+#
+# Debian 12 (Bookworm)
+#   aws ec2 describe-images \
+#     --owners 136693071363 \
+#     --filters 'Name=name,Values=debian-12-amd64-*' \
+#               'Name=state,Values=available' \
+#     --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+#
+# CentOS Stream 9
+#   aws ec2 describe-images \
+#     --owners 125523088429 \
+#     --filters 'Name=name,Values=CentOS Stream 9*' \
+#               'Name=state,Values=available' \
+#     --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+#
+# RHEL 9 (Red Hat official)
+#   aws ec2 describe-images \
+#     --owners 309956199498 \
+#     --filters 'Name=name,Values=RHEL-9*GA*' \
+#               'Name=architecture,Values=x86_64' \
+#               'Name=state,Values=available' \
+#     --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+#
+# RHEL 10 (Red Hat official)
+#   aws ec2 describe-images \
+#     --owners 309956199498 \
+#     --filters 'Name=name,Values=RHEL-10*GA*' \
+#               'Name=architecture,Values=x86_64' \
+#               'Name=state,Values=available' \
+#     --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+#
+# AlmaLinux 9
+#   aws ec2 describe-images \
+#     --owners 764336703387 \
+#     --filters 'Name=name,Values=AlmaLinux OS 9*' \
+#               'Name=state,Values=available' \
+#     --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+#
+# Oracle Linux 9
+#   aws ec2 describe-images \
+#     --owners 131827586825 \
+#     --filters 'Name=name,Values=OL9*' \
+#               'Name=state,Values=available' \
+#     --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+#
+# Rocky Linux 9
+#   aws ec2 describe-images \
+#     --owners 792107900699 \
+#     --filters 'Name=name,Values=Rocky-9-*' \
+#               'Name=state,Values=available' \
+#     --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text
+#
+ami_id = "ami-xxxxxxxx"
+
+# Recommended: attach an IAM instance profile so SSM Session Manager works
+# (no bastion host or open SSH port needed — IAM-controlled + CloudTrail-logged)
+iam_instance_profile_name = "aidome-ssm-profile" # must have AmazonSSMManagedInstanceCore
+
+# Optional: allow SSH from a narrow internal CIDR (SSM is preferred)
+# allowed_ssh_cidr = "10.0.0.0/8"
+# key_name         = "my-key-pair"
+
+# Instance sizing — t3.small is the minimum for AIDome
+instance_type    = "t3.small"
+root_volume_size = 30 # GiB — increase if large model artefacts will be stored locally
+
+# Optional: customer-managed KMS key for EBS encryption
+# (omit to use the default AWS managed key aws/ebs)
+# kms_key_id = "arn:aws:kms:us-east-1:123456789012:key/mrk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Resource name prefix and tags
+name_prefix = "aidome-ec2"
+tags = {
+  Environment = "dev"
+  Project     = "aidome"
+  ManagedBy   = "terraform"
+}
+
+# cloud-init delivery mode
+# "local" (default) — the cloud-init YAML is read from disk, gzip-compressed, and embedded in
+#   user data. Both scripts compress to < 8 KB — well under the 16 KB EC2 limit — with no
+#   runtime dependency on GitHub reachability. Recommended for all deployments.
+# "github" — instance fetches the cloud-init YAML from the public GitHub repository at first boot
+#   using cloud-init's #include directive. Requires outbound HTTPS to raw.githubusercontent.com
+#   (NAT gateway or VPC endpoint required). Pin github_ref to a tag or SHA in production.
+# cloud_init_delivery = "local"
+
+# Git ref used when cloud_init_delivery = "github".
+# Pin to a release tag or commit SHA in production for reproducible deployments:
+#   github_ref = "v1.2.0"   # or a commit SHA such as "abc1234"
+# Defaults to "main" when not set.
+# github_ref = "main"
