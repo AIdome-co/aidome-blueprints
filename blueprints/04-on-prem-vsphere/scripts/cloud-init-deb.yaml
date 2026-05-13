@@ -130,33 +130,36 @@ write_files:
       -w /var/log/faillog -p wa -k logins
       -w /var/log/lastlog -p wa -k logins
 
-  - path: /usr/local/sbin/aidome-vmware-firewall.sh
-    permissions: "0750"
+  - path: /etc/iptables/rules.v4
+    permissions: "0640"
     owner: root:root
     content: |
-      #!/usr/bin/env bash
-      set -euo pipefail
+      *filter
+      :INPUT DROP [0:0]
+      :FORWARD DROP [0:0]
+      :OUTPUT ACCEPT [0:0]
+      :DOCKER-USER - [0:0]
+      -A INPUT -i lo -j ACCEPT
+      -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+      -A INPUT -p tcp -s ${allowed_ssh_cidr} --dport 22 -m conntrack --ctstate NEW -j ACCEPT
+      -A DOCKER-USER -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+      -A DOCKER-USER -j RETURN
+      COMMIT
 
-      iptables -F
-      iptables -X
-      iptables -P INPUT DROP
-      iptables -P FORWARD DROP
-      iptables -P OUTPUT ACCEPT
-      iptables -A INPUT -i lo -j ACCEPT
-      iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-      iptables -A INPUT -p tcp -s ${allowed_ssh_cidr} --dport 22 -m conntrack --ctstate NEW -j ACCEPT
-      iptables -N DOCKER-USER 2>/dev/null || true
-      iptables -F DOCKER-USER
-      iptables -A DOCKER-USER -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-      iptables -A DOCKER-USER -j RETURN
-
-      ip6tables -F
-      ip6tables -X
-      ip6tables -P INPUT DROP
-      ip6tables -P FORWARD DROP
-      ip6tables -P OUTPUT ACCEPT
-      ip6tables -A INPUT -i lo -j ACCEPT
-      ip6tables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+  - path: /etc/iptables/rules.v6
+    permissions: "0640"
+    owner: root:root
+    content: |
+      *filter
+      :INPUT DROP [0:0]
+      :FORWARD DROP [0:0]
+      :OUTPUT ACCEPT [0:0]
+      :DOCKER-USER - [0:0]
+      -A INPUT -i lo -j ACCEPT
+      -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+      -A DOCKER-USER -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+      -A DOCKER-USER -j RETURN
+      COMMIT
 
 runcmd:
   - install -m 0755 -d /etc/apt/keyrings
@@ -172,9 +175,8 @@ runcmd:
   - apt-get update
   - apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
   - usermod -aG docker aidome-ops
-  - /usr/local/sbin/aidome-vmware-firewall.sh
-  - iptables-save > /etc/iptables/rules.v4
-  - ip6tables-save > /etc/iptables/rules.v6
+  - iptables-restore < /etc/iptables/rules.v4
+  - ip6tables-restore < /etc/iptables/rules.v6
   - systemctl enable --now auditd docker fail2ban netfilter-persistent open-vm-tools
   - systemctl restart ssh
   - augenrules --load

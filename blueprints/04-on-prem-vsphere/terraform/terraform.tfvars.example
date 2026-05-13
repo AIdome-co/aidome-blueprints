@@ -28,7 +28,8 @@ domain_name    = "corp.example.com"
 allowed_ssh_cidr = "10.20.0.0/16"
 
 # Public key for the aidome-ops operator account.
-ssh_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleOnlyReplaceMe aidome-ops@example"
+# Replace this example value with your real public key before planning or applying.
+ssh_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDg2KCoOVekawi9XFTCz0b/ZuGfPTzGfuUSqaoL1FIvF aidome-ops@example"
 
 num_cpus          = 4
 memory_mb         = 8192
