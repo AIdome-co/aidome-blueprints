@@ -163,6 +163,7 @@ At first boot, cloud-init:
 2. creates the `aidome-ops` operator account
 3. hardens SSH access (`PermitRootLogin no`, `PasswordAuthentication no`, `AllowUsers aidome-ops`)
 4. installs Docker Engine from Docker's official Ubuntu repository
+   and verifies the Docker repository signing key fingerprint
 5. installs and enables `open-vm-tools`, `fail2ban`, `auditd`, and `netfilter-persistent`
 6. applies iptables host-firewall rules, including the `DOCKER-USER` chain
 

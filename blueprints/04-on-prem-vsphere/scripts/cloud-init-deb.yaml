@@ -164,6 +164,7 @@ write_files:
 runcmd:
   - install -m 0755 -d /etc/apt/keyrings
   - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  - gpg --show-keys --with-colons /etc/apt/keyrings/docker.asc | grep -q 'fpr:::::::::9DC858229FC7DD38854AE2D88D81803C0EBFCD88:'
   - chmod a+r /etc/apt/keyrings/docker.asc
   - |
     arch="$(dpkg --print-architecture)"
@@ -177,7 +178,11 @@ runcmd:
   - usermod -aG docker aidome-ops
   - iptables-restore < /etc/iptables/rules.v4
   - ip6tables-restore < /etc/iptables/rules.v6
-  - systemctl enable --now auditd docker fail2ban netfilter-persistent open-vm-tools
+  - systemctl enable --now auditd
+  - systemctl enable --now docker
+  - systemctl enable --now fail2ban
+  - systemctl enable --now netfilter-persistent
+  - systemctl enable --now open-vm-tools
   - systemctl restart ssh
   - augenrules --load
   - sysctl --system

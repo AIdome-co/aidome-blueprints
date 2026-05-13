@@ -88,8 +88,8 @@ resource "vsphere_virtual_machine" "vm" {
     "guestinfo.userdata.encoding" = "gzip+base64"
   }
 
-  wait_for_guest_ip_timeout  = 10
-  wait_for_guest_net_timeout = 10
+  wait_for_guest_ip_timeout  = var.wait_for_guest_ip_timeout
+  wait_for_guest_net_timeout = var.wait_for_guest_net_timeout
 
   lifecycle {
     precondition {

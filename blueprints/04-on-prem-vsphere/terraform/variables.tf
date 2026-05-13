@@ -138,6 +138,18 @@ variable "thin_provisioned" {
   default     = false
 }
 
+variable "wait_for_guest_ip_timeout" {
+  description = "Timeout in minutes for VMware Tools to report a guest IP address"
+  type        = number
+  default     = 10
+}
+
+variable "wait_for_guest_net_timeout" {
+  description = "Timeout in minutes for VMware Tools to report guest networking readiness"
+  type        = number
+  default     = 10
+}
+
 variable "vm_folder" {
   description = "Optional vSphere folder path for the virtual machine"
   type        = string
