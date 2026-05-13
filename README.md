@@ -12,8 +12,9 @@
 | # | Blueprint | Status | Complexity | Cloud | Use-case |
 |---|-----------|--------|-----------|-------|----------|
 | 01 | [AWS EC2 – Single Node](blueprints/01-aws-ec2/README.md) | ✅ Available | ⭐⭐ Intermediate | AWS | Single hardened EC2 instance — bring your own VPC |
-| 02 | [Kubernetes](blueprints/02-kubernetes/README.md) | 📬 Contact Us | ⭐⭐⭐ Advanced | AWS / GCP / Azure | Production workloads requiring high availability and horizontal scale |
+| 02 | [HA Kubernetes](blueprints/02-ha-kubernetes/README.md) | 📬 Contact Us | ⭐⭐⭐ Advanced | AWS / GCP / Azure | Production workloads requiring high availability and horizontal scale |
 | 03 | [Air-Gapped](blueprints/03-air-gapped/README.md) | 📬 Contact Us | ⭐⭐⭐⭐ Expert | On-prem / private cloud | Regulated / offline environments with no internet access |
+| 04 | [VMware vSphere – Single Node](blueprints/04-on-prem-vsphere/README.md) | ✅ Available | ⭐⭐ Intermediate | On-prem / VMware | Single hardened VM on customer-managed vSphere infrastructure |
 
 ---
 
@@ -33,14 +34,18 @@ aidome-blueprints/
 │   │   ├── cloudformation/
 │   │   ├── scripts/
 │   │   └── terraform/
-│   ├── 02-kubernetes/
+│   ├── 02-ha-kubernetes/
 │   │   ├── README.md
 │   │   ├── architecture.png
 │   │   ├── terraform/
 │   │   └── helm/
-│   └── 03-air-gapped/
+│   ├── 03-air-gapped/
 │       ├── README.md
 │       └── ansible/
+│   └── 04-on-prem-vsphere/
+│       ├── README.md
+│       ├── terraform/
+│       └── scripts/
 ├── shared/
 │   ├── terraform-modules/
 │   └── scripts/
@@ -82,9 +87,9 @@ Requires an existing AWS VPC and private subnet (Bring Your Own VPC).
 
 ---
 
-### 02 · Kubernetes
+### 02 · HA Kubernetes
 
-**File:** [`blueprints/02-kubernetes/README.md`](blueprints/02-kubernetes/README.md)
+**File:** [`blueprints/02-ha-kubernetes/README.md`](blueprints/02-ha-kubernetes/README.md)
 
 > 📬 **Self-service docs not yet published.** This deployment is fully supported today — contact your AIdome account team.
 
@@ -105,6 +110,17 @@ Deploy AIdome in a fully isolated, internet-free environment using Ansible.
 Designed for regulated industries (defense, finance, healthcare) and on-premises
 private-cloud setups where outbound internet access is not permitted. Requires
 pre-staged artifacts (container images, packages) delivered by the AIdome team.
+
+---
+
+### 04 · VMware vSphere – Single Node
+
+**File:** [`blueprints/04-on-prem-vsphere/README.md`](blueprints/04-on-prem-vsphere/README.md)
+
+Deploy a hardened single-node AIdome host on customer-managed VMware vSphere.
+Terraform clones an Ubuntu cloud-image template, injects cloud-init via VMware GuestInfo,
+and configures Docker Engine, host firewalling, auditd, fail2ban, and the `aidome-ops`
+operator account at first boot.
 
 ---
 

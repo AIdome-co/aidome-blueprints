@@ -1,0 +1,14 @@
+instance-id: "aidome-vsphere-${vm_hostname}"
+local-hostname: "${vm_hostname}"
+network:
+  version: 2
+  ethernets:
+    ${guest_network_interface_name}:
+      dhcp4: false
+      addresses:
+        - "${ip_address}/${prefix_length}"
+      routes:
+        - to: default
+          via: "${gateway}"
+      nameservers:
+        addresses: ${dns_servers}

@@ -1,0 +1,183 @@
+#cloud-config
+#
+# AIdome VMware vSphere cloud-init configuration
+# - Ubuntu 24.04 LTS cloud-image template
+# - Docker Engine from Docker's official apt repository
+# - SSH hardening, iptables firewall, fail2ban, auditd
+# - aidome-ops operator account with key-based access only
+
+preserve_hostname: false
+hostname: "${vm_hostname}"
+fqdn: "${fqdn}"
+ssh_pwauth: false
+timezone: UTC
+
+users:
+  - default
+  - name: aidome-ops
+    gecos: AIdome Operator
+    groups: [sudo, adm]
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: true
+    ssh_authorized_keys:
+      - "${ssh_public_key}"
+
+package_update: true
+package_upgrade: true
+packages:
+  - auditd
+  - ca-certificates
+  - curl
+  - fail2ban
+  - gnupg
+  - iptables-persistent
+  - jq
+  - netfilter-persistent
+  - open-vm-tools
+  - unzip
+
+bootcmd:
+  - [cloud-init-per, instance, mkdir-iptables, mkdir, -p, /etc/iptables]
+  - [cloud-init-per, instance, debconf-v4, sh, -c, "echo 'iptables-persistent iptables-persistent/autosave_v4 boolean false' | debconf-set-selections"]
+  - [cloud-init-per, instance, debconf-v6, sh, -c, "echo 'iptables-persistent iptables-persistent/autosave_v6 boolean false' | debconf-set-selections"]
+
+write_files:
+  - path: /etc/ssh/sshd_config.d/60-aidome-hardening.conf
+    permissions: "0644"
+    owner: root:root
+    content: |
+      PermitRootLogin no
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      PubkeyAuthentication yes
+      ChallengeResponseAuthentication no
+      AllowAgentForwarding no
+      AllowTcpForwarding no
+      X11Forwarding no
+      AllowUsers aidome-ops
+      LogLevel VERBOSE
+      MaxAuthTries 3
+      LoginGraceTime 30
+      Banner /etc/issue.net
+
+  - path: /etc/issue.net
+    permissions: "0644"
+    owner: root:root
+    content: |
+      ******************************************************************
+      *                      AIdome VMware Server                       *
+      *  Authorized access only. Activity may be monitored and logged. *
+      ******************************************************************
+
+  - path: /etc/motd
+    permissions: "0644"
+    owner: root:root
+    content: |
+      Welcome to the AIdome VMware vSphere blueprint host.
+
+      Installed components:
+      - Docker Engine
+      - open-vm-tools
+      - fail2ban
+      - auditd
+      - netfilter-persistent
+
+  - path: /etc/sysctl.d/99-aidome-security.conf
+    permissions: "0644"
+    owner: root:root
+    content: |
+      net.ipv4.conf.all.accept_redirects = 0
+      net.ipv4.conf.default.accept_redirects = 0
+      net.ipv4.conf.all.accept_source_route = 0
+      net.ipv4.conf.default.accept_source_route = 0
+      net.ipv4.conf.all.rp_filter = 1
+      net.ipv4.conf.default.rp_filter = 1
+      net.ipv4.icmp_echo_ignore_broadcasts = 1
+      net.ipv4.tcp_syncookies = 1
+      kernel.dmesg_restrict = 1
+      kernel.kptr_restrict = 2
+      kernel.randomize_va_space = 2
+      kernel.yama.ptrace_scope = 1
+      fs.suid_dumpable = 0
+      fs.protected_hardlinks = 1
+      fs.protected_symlinks = 1
+      net.ipv6.conf.all.accept_redirects = 0
+      net.ipv6.conf.default.accept_redirects = 0
+      net.ipv6.conf.all.accept_source_route = 0
+      net.ipv6.conf.default.accept_source_route = 0
+
+  - path: /etc/fail2ban/jail.d/aidome-sshd.local
+    permissions: "0644"
+    owner: root:root
+    content: |
+      [sshd]
+      enabled = true
+      port = 22
+      backend = systemd
+      maxretry = 5
+      findtime = 10m
+      bantime = 1h
+
+  - path: /etc/audit/rules.d/99-aidome.rules
+    permissions: "0640"
+    owner: root:root
+    content: |
+      -w /etc/sudoers -p wa -k scope
+      -w /etc/sudoers.d -p wa -k scope
+      -w /etc/ssh/sshd_config -p wa -k sshd
+      -w /etc/ssh/sshd_config.d -p wa -k sshd
+      -w /var/log/faillog -p wa -k logins
+      -w /var/log/lastlog -p wa -k logins
+
+  - path: /usr/local/sbin/aidome-vmware-firewall.sh
+    permissions: "0750"
+    owner: root:root
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      iptables -F
+      iptables -X
+      iptables -P INPUT DROP
+      iptables -P FORWARD DROP
+      iptables -P OUTPUT ACCEPT
+      iptables -A INPUT -i lo -j ACCEPT
+      iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+      iptables -A INPUT -p tcp -s ${allowed_ssh_cidr} --dport 22 -m conntrack --ctstate NEW -j ACCEPT
+      iptables -N DOCKER-USER 2>/dev/null || true
+      iptables -F DOCKER-USER
+      iptables -A DOCKER-USER -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+      iptables -A DOCKER-USER -j RETURN
+
+      ip6tables -F
+      ip6tables -X
+      ip6tables -P INPUT DROP
+      ip6tables -P FORWARD DROP
+      ip6tables -P OUTPUT ACCEPT
+      ip6tables -A INPUT -i lo -j ACCEPT
+      ip6tables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+runcmd:
+  - install -m 0755 -d /etc/apt/keyrings
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  - chmod a+r /etc/apt/keyrings/docker.asc
+  - |
+    arch="$(dpkg --print-architecture)"
+    . /etc/os-release
+    printf 'deb [arch=%s signed-by=%s] https://download.docker.com/linux/ubuntu %s stable\n' \
+      "$arch" \
+      /etc/apt/keyrings/docker.asc \
+      "$VERSION_CODENAME" > /etc/apt/sources.list.d/docker.list
+  - apt-get update
+  - apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  - usermod -aG docker aidome-ops
+  - /usr/local/sbin/aidome-vmware-firewall.sh
+  - iptables-save > /etc/iptables/rules.v4
+  - ip6tables-save > /etc/iptables/rules.v6
+  - systemctl enable --now auditd docker fail2ban netfilter-persistent open-vm-tools
+  - systemctl restart ssh
+  - augenrules --load
+  - sysctl --system
+
+final_message: "AIdome VMware bootstrap completed for ${vm_hostname}"
