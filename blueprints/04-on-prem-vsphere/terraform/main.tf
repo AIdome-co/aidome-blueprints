@@ -96,5 +96,10 @@ resource "vsphere_virtual_machine" "vm" {
       condition     = length(data.vsphere_virtual_machine.template.disks) > 0
       error_message = "The selected template must expose at least one disk."
     }
+
+    precondition {
+      condition     = !(var.thin_provisioned && var.eagerly_scrub)
+      error_message = "eagerly_scrub cannot be true when thin_provisioned is true."
+    }
   }
 }

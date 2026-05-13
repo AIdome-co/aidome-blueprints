@@ -183,6 +183,8 @@ This blueprint applies secure defaults for an on-prem single-node deployment:
 - **Operator-only access** — `aidome-ops` is the allowed interactive SSH account
 - **Operational sudo** — `aidome-ops` has passwordless sudo by design because the account is SSH-key
   only and is intended for controlled operator automation; rotate SSH keys promptly if access changes
+- **Docker administration boundary** — `aidome-ops` joins the `docker` group intentionally, so treat
+  it as a trusted operator account rather than an unprivileged application identity
 - **Audit and intrusion prevention** — `auditd` and `fail2ban` are enabled on first boot
 
 If your environment includes VMware NSX, apply a distributed firewall policy in front of the VM as
