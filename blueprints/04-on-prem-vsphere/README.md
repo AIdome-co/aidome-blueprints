@@ -176,7 +176,12 @@ This blueprint applies secure defaults for an on-prem single-node deployment:
 - **Narrow SSH exposure** — inbound port `22` is restricted to the management CIDR you provide
 - **UEFI Secure Boot** — enabled by default in Terraform
 - **Host firewall** — iptables default-drop on inbound traffic plus a `DOCKER-USER` policy chain
+- **Outbound posture** — the host keeps `OUTPUT ACCEPT` so package installation, container image pulls,
+  and the AIdome installer can reach approved upstream endpoints; if you require egress filtering,
+  add explicit outbound allow rules before changing the default policy
 - **Operator-only access** — `aidome-ops` is the allowed interactive SSH account
+- **Operational sudo** — `aidome-ops` has passwordless sudo by design because the account is SSH-key
+  only and is intended for controlled operator automation; rotate SSH keys promptly if access changes
 - **Audit and intrusion prevention** — `auditd` and `fail2ban` are enabled on first boot
 
 If your environment includes VMware NSX, apply a distributed firewall policy in front of the VM as
@@ -295,6 +300,6 @@ and coordinate with the AIdome team.
 ## Further Reading
 
 - [cloud-init VMware datasource](https://cloudinit.readthedocs.io/en/latest/reference/datasources/vmware.html)
-- [Terraform vSphere provider](https://registry.terraform.io/providers/hashicorp/vsphere/latest/docs)
-- [vsphere_virtual_machine resource](https://registry.terraform.io/providers/hashicorp/vsphere/latest/docs/resources/virtual_machine)
+- [Terraform vSphere provider](https://registry.terraform.io/providers/vmware/vsphere/latest/docs)
+- [vsphere_virtual_machine resource](https://registry.terraform.io/providers/vmware/vsphere/latest/docs/resources/virtual_machine)
 - [VMware Secure Boot overview](https://knowledge.broadcom.com/external/article?legacyId=2147608)

@@ -1,10 +1,14 @@
 variable "allowed_ssh_cidr" {
-  description = "Management CIDR that is allowed to connect to the VM over SSH"
+  description = "IPv4 management CIDR that is allowed to connect to the VM over SSH"
   type        = string
 
   validation {
-    condition     = !contains(["0.0.0.0/0", "::/0"], var.allowed_ssh_cidr)
-    error_message = "allowed_ssh_cidr must be a narrow management CIDR, not 0.0.0.0/0 or ::/0."
+    condition = (
+      can(cidrnetmask(var.allowed_ssh_cidr)) &&
+      can(tonumber(split("/", var.allowed_ssh_cidr)[1])) &&
+      tonumber(split("/", var.allowed_ssh_cidr)[1]) >= 16
+    )
+    error_message = "allowed_ssh_cidr must be a valid IPv4 CIDR with a prefix length of /16 or narrower."
   }
 }
 

@@ -80,6 +80,8 @@ resource "vsphere_virtual_machine" "vm" {
   }
 
   extra_config = {
+    # Metadata is intentionally base64-only because the rendered payload is small and keeping it
+    # human-readable simplifies VMware GuestInfo troubleshooting from the guest console.
     "guestinfo.metadata"          = base64encode(local.metadata)
     "guestinfo.metadata.encoding" = "base64"
     "guestinfo.userdata"          = base64gzip(local.cloud_init_user_data)
