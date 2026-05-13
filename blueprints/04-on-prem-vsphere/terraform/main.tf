@@ -1,4 +1,6 @@
 provider "vsphere" {
+  # Keep certificate verification enabled. If your vCenter uses a private CA, add that CA to the
+  # Terraform runner's trust store before planning or applying rather than disabling verification.
   allow_unverified_ssl = false
 }
 
