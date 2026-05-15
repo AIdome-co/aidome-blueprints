@@ -160,12 +160,17 @@ This blueprint uses VMware GuestInfo to pass two payloads to the guest:
 At first boot, cloud-init:
 
 1. sets the hostname and static network configuration
-2. creates the `aidome-ops` operator account
-3. hardens SSH access (`PermitRootLogin no`, `PasswordAuthentication no`, `AllowUsers aidome-ops`)
-4. installs Docker Engine from Docker's official Ubuntu repository
-   and verifies the Docker repository signing key fingerprint
-5. installs and enables `open-vm-tools`, `fail2ban`, `auditd`, and `netfilter-persistent`
-6. applies iptables host-firewall rules, including the `DOCKER-USER` chain
+2. creates the `aidome-ops` operator account with SSH key injection
+3. hardens SSH access (`PermitRootLogin no`, `PasswordAuthentication no`, `AllowUsers aidome-ops`,
+   `LogLevel VERBOSE`, `ClientAliveInterval 300`)
+4. installs Docker Engine from Docker's official repository (auto-detects Ubuntu/Debian)
+5. installs and enables `open-vm-tools`, `fail2ban`, `auditd`, `netfilter-persistent`,
+   and `unattended-upgrades`
+6. applies CIS 4.1.x audit rules (time, identity, logins, privileged commands, file mods,
+   sudoers, SSH keys, network sockets, kernel modules)
+7. applies iptables host-firewall rules with ICMP, RFC1918 HTTPS, and `DOCKER-USER` chain
+8. applies sysctl kernel/network hardening (CIS 1.5.2, 3.3.x)
+9. reboots to apply all kernel and network settings
 
 ---
 
@@ -177,6 +182,7 @@ This blueprint applies secure defaults for an on-prem single-node deployment:
 - **Narrow SSH exposure** — inbound port `22` is restricted to the management CIDR you provide
 - **UEFI Secure Boot** — enabled by default in Terraform
 - **Host firewall** — iptables default-drop on inbound traffic plus a `DOCKER-USER` policy chain
+  restricting container-published ports to RFC1918 sources
 - **Outbound posture** — the host keeps `OUTPUT ACCEPT` so package installation, container image pulls,
   and the AIdome installer can reach approved upstream endpoints; if you require egress filtering,
   add explicit outbound allow rules before changing the default policy
@@ -185,7 +191,12 @@ This blueprint applies secure defaults for an on-prem single-node deployment:
   only and is intended for controlled operator automation; rotate SSH keys promptly if access changes
 - **Docker administration boundary** — `aidome-ops` joins the `docker` group intentionally, so treat
   it as a trusted operator account rather than an unprivileged application identity
-- **Audit and intrusion prevention** — `auditd` and `fail2ban` are enabled on first boot
+- **CIS-aligned audit rules** — `auditd` enforces CIS 4.1.x controls (time, identity, logins,
+  privileged commands, file modifications, sudoers, SSH keys, network sockets, kernel modules)
+- **Kernel/network hardening** — sysctl directives cover CIS 1.5.2 (ASLR), 3.3.x (IP forwarding,
+  redirects, source routing, martian logging), and TCP SYN flood protection
+- **Intrusion prevention** — `fail2ban` protects SSH on port 22
+- **Automatic security updates** — `unattended-upgrades` enabled via APT configuration
 
 If your environment includes VMware NSX, apply a distributed firewall policy in front of the VM as
 an additional control. This blueprint does not create NSX resources.

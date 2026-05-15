@@ -9,7 +9,6 @@ locals {
 
   cloud_init_user_data = templatefile("${path.module}/../scripts/cloud-init-deb.yaml", {
     allowed_ssh_cidr = var.allowed_ssh_cidr
-    domain_name      = var.domain_name
     fqdn             = "${local.effective_vm_hostname}.${var.domain_name}"
     ssh_public_key   = var.ssh_public_key
     vm_hostname      = local.effective_vm_hostname
