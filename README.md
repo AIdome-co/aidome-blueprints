@@ -40,8 +40,8 @@ aidome-blueprints/
 │   │   ├── terraform/
 │   │   └── helm/
 │   ├── 03-air-gapped/
-│       ├── README.md
-│       └── ansible/
+│   │   ├── README.md
+│   │   └── ansible/
 │   └── 04-on-prem-vsphere/
 │       ├── README.md
 │       ├── terraform/
