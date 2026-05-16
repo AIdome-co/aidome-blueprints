@@ -44,6 +44,7 @@ jobs:
             blueprints/01-aws-ec2/scripts/cloud-init-rhel.yaml \
             blueprints/01-aws-ec2/scripts/cloud-init.yaml \
             blueprints/04-on-prem-vsphere/scripts/cloud-init-deb.yaml \
+            blueprints/04-on-prem-vsphere/scripts/cloud-init.yaml \
             blueprints/04-on-prem-vsphere/scripts/metadata.yaml
 
   # --------------------------------------------------------------------------
@@ -75,10 +76,15 @@ jobs:
           cloud-init schema
           --config-file blueprints/01-aws-ec2/scripts/cloud-init.yaml
 
-      - name: Validate schema — VMware vSphere
+      - name: Validate schema — VMware vSphere (Debian)
         run: >-
           cloud-init schema
           --config-file blueprints/04-on-prem-vsphere/scripts/cloud-init-deb.yaml
+
+      - name: Validate schema — VMware vSphere (generic)
+        run: >-
+          cloud-init schema
+          --config-file blueprints/04-on-prem-vsphere/scripts/cloud-init.yaml
 
   # --------------------------------------------------------------------------
   # 3. Terraform fmt + init + validate

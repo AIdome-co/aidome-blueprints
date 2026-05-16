@@ -154,7 +154,8 @@ This blueprint uses VMware GuestInfo to pass two payloads to the guest:
 
 | File | Purpose |
 |---|---|
-| [`scripts/cloud-init-deb.yaml`](scripts/cloud-init-deb.yaml) | Ubuntu/Debian first-boot hardening and package installation |
+| [`scripts/cloud-init.yaml`](scripts/cloud-init.yaml) | Generic (Ubuntu 24.04) — standalone use without Terraform |
+| [`scripts/cloud-init-deb.yaml`](scripts/cloud-init-deb.yaml) | Debian family — Terraform `templatefile()` variant with variables |
 | [`scripts/metadata.yaml`](scripts/metadata.yaml) | Hostname and static network configuration rendered by Terraform |
 
 At first boot, cloud-init:
@@ -292,6 +293,7 @@ blueprints/04-on-prem-vsphere/
 │   ├── variables.tf
 │   └── versions.tf
 └── scripts/
+    ├── cloud-init.yaml
     ├── cloud-init-deb.yaml
     └── metadata.yaml
 ```
