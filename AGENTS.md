@@ -16,8 +16,9 @@ If you are an AI assistant opening this repo, **read this file first**, then the
 | # | Blueprint | Tooling |
 |---|-----------|---------|
 | 01 | AWS EC2 – Single Node (customer onboarding) | Terraform, CloudFormation, cloud-init |
-| 02 | Kubernetes | Terraform + Helm |
+| 02 | HA Kubernetes | Terraform + Helm |
 | 03 | Air-Gapped | Ansible |
+| 04 | VMware vSphere – Single Node | Terraform, cloud-init |
 
 See [`README.md`](README.md) for the blueprint matrix and [`docs/architecture-principles.md`](docs/architecture-principles.md) for shared design decisions.
 
@@ -42,8 +43,9 @@ aidome-blueprints/
 │   └── workflows/                    ← CI: validate.yml, publish-docs.yml
 ├── blueprints/
 │   ├── 01-aws-ec2/                   ← terraform/, cloudformation/, scripts/
-│   ├── 02-kubernetes/                ← terraform/, helm/
-│   └── 03-air-gapped/                ← ansible/
+│   ├── 02-ha-kubernetes/             ← terraform/, helm/
+│   ├── 03-air-gapped/                ← ansible/
+│   └── 04-on-prem-vsphere/           ← terraform/, scripts/
 ├── shared/
 │   ├── terraform-modules/            ← Reusable TF modules
 │   └── scripts/                      ← Shared shell scripts
@@ -91,7 +93,7 @@ These apply to **every** change, regardless of which blueprint you are editing.
 
 Run these locally before opening a PR. They must all succeed.
 
-### Terraform (blueprints 02 and 03; shared/terraform-modules)
+### Terraform (blueprints 01, 02, and 04; shared/terraform-modules)
 ```bash
 terraform fmt -check -recursive .
 terraform init -backend=false
@@ -100,7 +102,7 @@ tflint --recursive             # optional but recommended
 tfsec . || checkov -d .        # security scan (pick one)
 ```
 
-### Ansible (blueprint 04)
+### Ansible (blueprint 03)
 ```bash
 yamllint .
 ansible-lint
@@ -108,7 +110,7 @@ ansible-playbook --syntax-check playbook.yml
 ansible-playbook --check --diff playbook.yml   # dry-run
 ```
 
-### CloudFormation (blueprint 02)
+### CloudFormation (blueprint 01)
 ```bash
 cfn-lint blueprints/01-aws-ec2/cloudformation/*.yaml
 aws cloudformation validate-template --template-body file://...
@@ -116,8 +118,8 @@ aws cloudformation validate-template --template-body file://...
 
 ### Kubernetes / Helm (blueprint 02)
 ```bash
-helm lint blueprints/02-kubernetes/helm/<chart>
-helm template blueprints/02-kubernetes/helm/<chart> | kubeconform -strict
+helm lint blueprints/02-ha-kubernetes/helm/<chart>
+helm template blueprints/02-ha-kubernetes/helm/<chart> | kubeconform -strict
 ```
 
 ### Shell scripts (`shared/scripts/`, `blueprints/*/scripts/`)
@@ -145,7 +147,7 @@ These files live in [`.github/instructions/`](.github/instructions/). Agents tha
 |------|-----------|--------|
 | `terraform.instructions.md` | `**/*.tf` | [github/awesome-copilot](https://github.com/github/awesome-copilot) |
 | `ansible.instructions.md` | `**/*.yaml, **/*.yml` (Ansible playbooks/roles) | github/awesome-copilot |
-| `kubernetes-manifests.instructions.md` | `blueprints/02-kubernetes/helm/**`, `k8s/**`, `manifests/**` | github/awesome-copilot |
+| `kubernetes-manifests.instructions.md` | `blueprints/02-ha-kubernetes/helm/**`, `k8s/**`, `manifests/**` | github/awesome-copilot |
 | `cloudformation.instructions.md` | `**/cloudformation/**/*.yaml`, `**/cloudformation/**/*.yml` | custom (this repo) |
 | `shell.instructions.md` | `**/*.sh` | github/awesome-copilot |
 | `markdown.instructions.md` | `**/*.md` | github/awesome-copilot |

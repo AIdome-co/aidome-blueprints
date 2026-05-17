@@ -1,0 +1,47 @@
+# terraform.tfvars.example
+#
+# Copy this file to terraform.tfvars and fill in your environment-specific values.
+# Never commit terraform.tfvars to version control.
+
+# Provider credentials are read from the environment:
+#   export VSPHERE_SERVER="vcenter.example.com"
+#   export VSPHERE_USER="terraform-svc@vsphere.local"
+#   export VSPHERE_PASSWORD="..."
+
+datacenter_name = "DC01"
+cluster_name    = "Production-Cluster"
+datastore_name  = "vsanDatastore"
+network_name    = "PG-AIDOME-PRIVATE"
+template_name   = "ubuntu-2404-cloud-template"
+
+vm_name     = "aidome-vsphere-01"
+vm_hostname = "aidome-vsphere-01"
+vm_folder   = "Customers/AIdome"
+
+ip_address     = "10.20.30.40"
+prefix_length  = 24
+gateway        = "10.20.30.1"
+dns_servers    = ["10.20.10.10", "10.20.10.11"]
+domain_name    = "corp.example.com"
+
+# Restrict SSH to your management subnet only.
+allowed_ssh_cidr = "10.20.0.0/16"
+
+# Public key for the aidome-ops operator account.
+# Replace this example value with your real public key before planning or applying.
+ssh_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDg2KCoOVekawi9XFTCz0b/ZuGfPTzGfuUSqaoL1FIvF aidome-ops@example"
+
+num_cpus          = 4
+memory_mb         = 8192
+root_disk_size_gb = 100
+
+# Production default is eager-zeroed thick.
+thin_provisioned = false
+eagerly_scrub    = true
+
+enable_secure_boot   = true
+enable_cpu_hot_add   = false
+enable_memory_hot_add = false
+
+# Change this if your template uses a different predictable network interface name.
+guest_network_interface_name = "ens160"

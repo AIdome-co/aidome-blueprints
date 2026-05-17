@@ -1,5 +1,5 @@
 ---
-applyTo: 'blueprints/02-kubernetes/helm/**/templates/**/*.yaml, blueprints/02-kubernetes/helm/**/templates/**/*.yml, k8s/**/*.yaml, k8s/**/*.yml, manifests/**/*.yaml, manifests/**/*.yml'
+applyTo: 'blueprints/02-ha-kubernetes/helm/**/templates/**/*.yaml, blueprints/02-ha-kubernetes/helm/**/templates/**/*.yml, k8s/**/*.yaml, k8s/**/*.yml, manifests/**/*.yaml, manifests/**/*.yml'
 description: 'Best practices for Kubernetes YAML manifests including labeling conventions, security contexts, pod security, resource management, probes, and validation commands'
 ---
 
