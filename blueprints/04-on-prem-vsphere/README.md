@@ -3,8 +3,9 @@
 > **Scope - Infrastructure Prerequisites Only**
 > This blueprint prepares a single Ubuntu VM on VMware vSphere for AIdome by provisioning the
 > server environment: OS hardening, Docker Engine, firewall rules, `open-vm-tools`, and the
-> `aidome-ops` operator account. The AIdome product installer (`aidome.sh`), application
-> configuration, `.env` files, and container images are delivered separately by the AIdome team.
+> `aidome-ops` operator account.
+>
+> The AIdome product installer (`aidome.sh`), application configuration, `.env` files, and container images are delivered separately by the AIdome team.
 
 ---
 
