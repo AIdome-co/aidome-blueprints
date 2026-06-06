@@ -215,7 +215,7 @@ PACKAGES=(
   vim curl htop wget ca-certificates gnupg lsb-release python3 git
   net-tools dnsutils iproute2 traceroute mtr
   iptables-persistent netfilter-persistent
-  fail2ban unattended-upgrades
+  fail2ban python3-systemd unattended-upgrades
   jq unzip
   auditd audispd-plugins
   open-vm-tools
@@ -417,6 +417,7 @@ enabled  = true
 port     = ${SSH_PORT}
 filter   = sshd
 logpath  = %(sshd_log)s
+backend  = systemd
 maxretry = 5
 bantime  = 3600
 findtime = 600
@@ -634,10 +635,10 @@ rm -rf /var/cache/apt/archives/* /var/lib/apt/lists/* 2>/dev/null || true
 # --------------------------------------------------------------------------
 banner "Bootstrap Summary"
 echo "Hostname:      $(hostname)"
-echo "Docker status: $(systemctl is-active docker || echo inactive)"
-echo "Fail2ban:      $(systemctl is-active fail2ban || echo inactive)"
-echo "Auditd:        $(systemctl is-active auditd || echo inactive)"
-echo "Firewall:      $(systemctl is-active netfilter-persistent || echo inactive)"
+echo "Docker:        $(systemctl is-active docker 2>/dev/null || echo 'not running')"
+echo "Fail2ban:      $(systemctl is-active fail2ban 2>/dev/null || echo 'not running')"
+echo "Auditd:        $(systemctl is-active auditd 2>/dev/null || echo 'not running')"
+echo "Firewall:      $(iptables -L INPUT -n 2>/dev/null | head -1 || echo 'not loaded')"
 echo "VMware Tools:  $(vmware-toolbox-cmd -v 2>/dev/null || echo 'not available')"
 echo "End time:      $(date -u)"
 
