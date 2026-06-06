@@ -17,6 +17,7 @@
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
 - [Cloud-Init Scripts](#cloud-init-scripts)
+- [Bootstrap Scripts (Pre-Installed VMs)](#bootstrap-scripts-pre-installed-vms)
 - [Security & Hardening](#security--hardening)
 - [Secrets Handling](#secrets-handling)
 - [Verify the Installation](#verify-the-installation)
@@ -159,20 +160,86 @@ This blueprint uses VMware GuestInfo to pass two payloads to the guest:
 | [`scripts/cloud-init-deb.yaml`](scripts/cloud-init-deb.yaml) | Debian family — Terraform `templatefile()` variant with variables |
 | [`scripts/metadata.yaml`](scripts/metadata.yaml) | Hostname and static network configuration rendered by Terraform |
 
+If the customer provides a **pre-installed VM** (cloud-init already ran or was never configured),
+use the bootstrap scripts described in the next section instead.
+
 At first boot, cloud-init:
 
 1. sets the hostname and static network configuration
 2. creates the `aidome-ops` operator account with SSH key injection
 3. hardens SSH access (`PermitRootLogin no`, `PasswordAuthentication no`, `AllowUsers aidome-ops`,
    `LogLevel VERBOSE`, `ClientAliveInterval 300`)
-4. installs Docker Engine from Docker's official repository (auto-detects Ubuntu/Debian)
-5. installs and enables `open-vm-tools`, `fail2ban`, `auditd`, `netfilter-persistent`,
-   and `unattended-upgrades`
+4. removes conflicting distro packages and installs Docker Engine from Docker's official repository (auto-detects Ubuntu/Debian)
+5. installs and enables `open-vm-tools`, `fail2ban` (with `systemd` journal backend and `python3-systemd` to support modern journald-only Ubuntu minimal installations), `auditd`, `netfilter-persistent`, and `unattended-upgrades`
 6. applies CIS 4.1.x audit rules (time, identity, logins, privileged commands, file mods,
    sudoers, SSH keys, network sockets, kernel modules)
-7. applies iptables host-firewall rules with ICMP, RFC1918 HTTPS, and `DOCKER-USER` chain
+7. applies iptables host-firewall rules — HTTPS (443) open to all sources,
+   SSH (22) restricted to management networks (IPv4) or private/ULA ranges (IPv6),
+   and `DOCKER-USER` chain for containers (allowing public 443 while limiting other container ports to RFC1918)
 8. applies sysctl kernel/network hardening (CIS 1.5.2, 3.3.x)
 9. reboots to apply all kernel and network settings
+
+---
+
+## Bootstrap Scripts (Pre-Installed VMs)
+
+For customers who provide a pre-installed Ubuntu VM (where cloud-init was never configured or has
+already run), use these standalone bash scripts. They apply the same hardening as the cloud-init
+blueprint.
+
+| File | Target | Status |
+|---|---|---|
+| [`scripts/bootstrap-server.sh`](scripts/bootstrap-server.sh) | Ubuntu Server 22.04 / 24.04 LTS | **Recommended for production** |
+| [`scripts/bootstrap-desktop.sh`](scripts/bootstrap-desktop.sh) | Ubuntu Desktop 22.04 / 24.04 LTS | Lab / dev only — not recommended for production |
+
+### Usage
+
+```bash
+# Ubuntu Server (recommended)
+sudo bash bootstrap-server.sh \
+  --ssh-key "ssh-ed25519 AAAA..." \
+  --hostname aidome-vsphere \
+  --allowed-ssh-cidr 10.0.0.0/8 \
+  --reboot
+
+# Ubuntu Desktop (lab/dev only)
+sudo bash bootstrap-desktop.sh \
+  --ssh-key-file /path/to/key.pub \
+  --hostname aidome-lab \
+  --reboot
+```
+
+### Options
+
+| Flag | Description | Default |
+|---|---|---|
+| `--ssh-key KEY` | SSH public key string for `aidome-ops` | _(required)_ |
+| `--ssh-key-file FILE` | Path to SSH public key file | _(alternative to --ssh-key)_ |
+| `--hostname NAME` | Set the VM hostname | _(keep current)_ |
+| `--allowed-ssh-cidr CIDR` | Management CIDR allowed to SSH (private network) | _(required)_ |
+| `--reboot` | Reboot after setup completes | _(no reboot)_ |
+
+### Network Posture
+
+- **Port 443 (HTTPS)** is open to **all sources** over IPv4 and IPv6 — this is the customer-facing interface.
+- **Port 22 (SSH)** is restricted to the `--allowed-ssh-cidr` only (for IPv4) and Link-Local (`fe80::/10`) / Unique Local (`fc00::/7`) address spaces (for IPv6) — management access from private networks.
+- The `DOCKER-USER` iptables chain allows public access to containers on port 443 while
+  restricting all other container ports to RFC1918 private sources.
+
+### Ubuntu Server vs. Desktop
+
+**Ubuntu Server is the recommended platform for AIdome.** It has a smaller attack surface, lower
+resource overhead, and aligns with CIS benchmarks. The Desktop bootstrap script is provided for
+cases where Desktop is the only available option (lab, dev, PoC). It disables the GUI and
+desktop services but does not uninstall them.
+
+| Concern | Ubuntu Server | Ubuntu Desktop |
+|---|---|---|
+| Attack surface | Minimal — no GUI packages | Larger — GNOME, PulseAudio, Bluetooth, CUPS, etc. |
+| Resource overhead | ~250 MB base RAM | ~1.5 GB+ base RAM (with GUI running) |
+| Network manager | systemd-networkd / netplan | NetworkManager |
+| CIS benchmark target | Yes | Not officially scoped |
+| Production ready | Yes | No — lab/dev only |
 
 ---
 
@@ -183,8 +250,7 @@ This blueprint applies secure defaults for an on-prem single-node deployment:
 - **Private-by-default network posture** — the VM is attached to an existing private port group
 - **Narrow SSH exposure** — inbound port `22` is restricted to the management CIDR you provide
 - **UEFI Secure Boot** — enabled by default in Terraform
-- **Host firewall** — iptables default-drop on inbound traffic plus a `DOCKER-USER` policy chain
-  restricting container-published ports to RFC1918 sources
+- **Host firewall** — iptables default-drop on inbound traffic; HTTPS (443) open to all sources (customer-facing) over IPv4 and IPv6, SSH (22) restricted to the management CIDR (IPv4) or link-local (`fe80::/10`) and Unique Local Address (`fc00::/7`) ranges (for IPv6), and the `DOCKER-USER` chain allows public access to containers on port 443 while restricting other container ports to RFC1918 private sources.
 - **Outbound posture** — the host keeps `OUTPUT ACCEPT` so package installation, container image pulls,
   and the AIdome installer can reach approved upstream endpoints; if you require egress filtering,
   add explicit outbound allow rules before changing the default policy
@@ -193,11 +259,12 @@ This blueprint applies secure defaults for an on-prem single-node deployment:
   only and is intended for controlled operator automation; rotate SSH keys promptly if access changes
 - **Docker administration boundary** — `aidome-ops` joins the `docker` group intentionally, so treat
   it as a trusted operator account rather than an unprivileged application identity
+- **Docker conflict avoidance** — automatically purges legacy or distro-packaged Docker releases (like `docker.io`, `containerd`, `runc`) before executing a GPG-verified installation of the official Docker Engine to prevent daemon socket and configuration conflicts.
 - **CIS-aligned audit rules** — `auditd` enforces CIS 4.1.x controls (time, identity, logins,
   privileged commands, file modifications, sudoers, SSH keys, network sockets, kernel modules)
 - **Kernel/network hardening** — sysctl directives cover CIS 1.5.2 (ASLR), 3.3.x (IP forwarding,
   redirects, source routing, martian logging), and TCP SYN flood protection
-- **Intrusion prevention** — `fail2ban` protects SSH on port 22
+- **Intrusion prevention (`fail2ban`)** — fail2ban protects SSH on port 22. On Ubuntu 22.04+ minimal/cloud-image builds, auth logs are stored exclusively in journald (no `/var/log/auth.log`). To prevent silent initialization failures, fail2ban is explicitly configured with `backend = systemd` and the `python3-systemd` package dependency.
 - **Automatic security updates** — `unattended-upgrades` enabled via APT configuration
 
 If your environment includes VMware NSX, apply a distributed firewall policy in front of the VM as
@@ -235,7 +302,9 @@ Expected outcomes:
 - `cloud-init status --wait` completes successfully
 - Docker is active
 - `permitrootlogin no`, `passwordauthentication no`, and `allowusers aidome-ops` are present
-- iptables shows an allow rule only for your management CIDR on `tcp/22`
+- iptables shows an allow rule only for your management CIDR on `tcp/22` (IPv4), and Link-Local / ULA ranges on `tcp/22` (IPv6)
+- iptables shows port `tcp/443` open to all sources (IPv4 and IPv6)
+- `fail2ban-client status sshd` displays the active jail properly linked to the systemd journal backend without errors
 
 ---
 
@@ -294,20 +363,22 @@ blueprints/04-on-prem-vsphere/
 │   ├── variables.tf
 │   └── versions.tf
 └── scripts/
-    ├── cloud-init.yaml
-    ├── cloud-init-deb.yaml
-    └── metadata.yaml
+    ├── cloud-init.yaml          # Cloud-init: generic Ubuntu 24.04
+    ├── cloud-init-deb.yaml      # Cloud-init: Debian family (Terraform templatefile)
+    ├── metadata.yaml            # Cloud-init: network metadata
+    ├── bootstrap-server.sh      # Bash: pre-installed Ubuntu Server
+    └── bootstrap-desktop.sh     # Bash: Ubuntu Desktop → server conversion
 ```
 
 ---
 
 ## Supported Operating Systems
 
-This blueprint currently ships with one supported guest bootstrap path:
-
-| OS family | Status | File |
-|---|---|---|
-| Ubuntu 24.04 LTS cloud image | ✅ Supported | `scripts/cloud-init-deb.yaml` |
+| OS family | Method | Status | File |
+|---|---|---|---|
+| Ubuntu 24.04 LTS cloud image | Cloud-init | Supported | `scripts/cloud-init-deb.yaml` |
+| Ubuntu Server 22.04 / 24.04 LTS (pre-installed) | Bash script | Supported | `scripts/bootstrap-server.sh` |
+| Ubuntu Desktop 22.04 / 24.04 LTS (pre-installed) | Bash script | Lab / dev only | `scripts/bootstrap-desktop.sh` |
 
 If you need a RHEL-family or fully offline VMware variant, use this blueprint as the starting point
 and coordinate with the AIdome team.

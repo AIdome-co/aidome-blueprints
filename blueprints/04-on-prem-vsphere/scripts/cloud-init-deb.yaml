@@ -88,6 +88,7 @@ packages:
   - iptables-persistent
   - netfilter-persistent
   - fail2ban
+  - python3-systemd
   - unattended-upgrades
   - jq
   - unzip
@@ -243,6 +244,7 @@ write_files:
       port     = 22
       filter   = sshd
       logpath  = %(sshd_log)s
+      backend  = systemd
       maxretry = 5
       bantime  = 3600
       findtime = 600
@@ -319,13 +321,19 @@ write_files:
       # Make the configuration immutable — requires reboot to change rules
       -e 2
 
-  # IPv4 firewall — SSH on port 22 + HTTPS from RFC1918
+  # IPv4 firewall
+  # Network posture:
+  #   - Port 443 (HTTPS) is open to ALL sources — customer-facing interface.
+  #   - Port 22 (SSH) is restricted to ${allowed_ssh_cidr} — management
+  #     access from private networks (ESXi host, vSphere console, jump boxes).
+  #   - DOCKER-USER chain allows public access to containers on port 443;
+  #     all other container ports are restricted to RFC1918 sources.
+  #   See: https://docs.docker.com/engine/network/firewall-iptables/
   - path: /etc/iptables/rules.v4
     permissions: "0640"
     owner: root:root
     content: |
       # Host-level defense-in-depth (VMware NSX or port group ACLs are the primary perimeter).
-      # Restrict HTTPS inbound to RFC1918 private space.
       *filter
       :INPUT DROP [0:0]
       :FORWARD DROP [0:0]
@@ -338,18 +346,20 @@ write_files:
 
       -A INPUT -p icmp --icmp-type echo-request -j ACCEPT
 
-      # SSH on port 22 — restricted to management CIDR
+      # SSH on port 22 — restricted to management CIDR (private network only).
+      # Covers ESXi management, vSphere console, and jump-box access.
       -A INPUT -p tcp -s ${allowed_ssh_cidr} --dport 22 -m conntrack --ctstate NEW -j ACCEPT
 
-      # HTTPS from RFC1918 private IPv4 ranges
-      -A INPUT -s 10.0.0.0/8 -p tcp --dport 443 -j ACCEPT
-      -A INPUT -s 172.16.0.0/12 -p tcp --dport 443 -j ACCEPT
-      -A INPUT -s 192.168.0.0/16 -p tcp --dport 443 -j ACCEPT
+      # HTTPS from ANY source — port 443 is the customer-facing interface
+      -A INPUT -p tcp --dport 443 -m conntrack --ctstate NEW -j ACCEPT
 
-      # DOCKER-USER chain -- Docker forwards traffic through FORWARD, not INPUT.
+      # DOCKER-USER chain — Docker forwards traffic through FORWARD, not INPUT.
       # Rules here apply to container-published ports before Docker's own rules.
-      # Allow only established/related and RFC1918 sources to reach containers.
+      # (see https://docs.docker.com/engine/network/firewall-iptables/)
+      # Allow any source to reach containers on port 443 (customer-facing).
+      # Restrict all other container ports to RFC1918 private sources.
       -A DOCKER-USER -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
+      -A DOCKER-USER -p tcp -m conntrack --ctorigdstport 443 --ctdir ORIGINAL -j RETURN
       -A DOCKER-USER -s 10.0.0.0/8 -j RETURN
       -A DOCKER-USER -s 172.16.0.0/12 -j RETURN
       -A DOCKER-USER -s 192.168.0.0/16 -j RETURN
@@ -357,7 +367,7 @@ write_files:
 
       COMMIT
 
-  # IPv6 firewall — SSH on port 22 + HTTPS from ULA space
+  # IPv6 firewall
   - path: /etc/iptables/rules.v6
     permissions: "0640"
     owner: root:root
@@ -371,11 +381,12 @@ write_files:
       -A INPUT -i lo -j ACCEPT
       -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 
-      # SSH over IPv6 on port 22
-      -A INPUT -p tcp --dport 22 -j ACCEPT
+      # SSH over IPv6 — restricted to link-local and ULA (private networks)
+      -A INPUT -s fe80::/10 -p tcp --dport 22 -j ACCEPT
+      -A INPUT -s fc00::/7  -p tcp --dport 22 -j ACCEPT
 
-      # HTTPS over IPv6 from ULA space
-      -A INPUT -s fc00::/7 -p tcp --dport 443 -j ACCEPT
+      # HTTPS over IPv6 from ANY source — customer-facing
+      -A INPUT -p tcp --dport 443 -m conntrack --ctstate NEW -j ACCEPT
 
       COMMIT
 
@@ -418,6 +429,10 @@ runcmd:
   # Display system information
   - 'cat /etc/os-release || true'
   - 'echo "Kernel: $(uname -r)"'
+
+  # Remove conflicting Docker packages that may exist on a pre-installed VM
+  # (per official Docker docs: https://docs.docker.com/engine/install/ubuntu/)
+  - 'apt-get remove -y docker.io docker-compose docker-compose-v2 docker-doc podman-docker containerd runc 2>/dev/null || true'
 
   # Install Docker Engine via official APT repository (GPG-verified — no pipe-to-shell)
   # Auto-detects distribution: ubuntu (22.04/24.04) or debian (12/Bookworm).
@@ -466,11 +481,11 @@ runcmd:
   # Status
   - 'echo "### Bootstrap Summary"'
   - 'echo "Hostname: $(hostname)"'
-  - 'echo "Docker status: $(systemctl is-active docker || echo inactive)"'
-  - 'echo "Fail2ban status: $(systemctl is-active fail2ban || echo inactive)"'
-  - 'echo "auditd status: $(systemctl is-active auditd || echo inactive)"'
-  - 'echo "Firewall status: $(systemctl is-active netfilter-persistent || echo inactive)"'
-  - 'echo "VMware Tools: $(vmware-toolbox-cmd -v 2>/dev/null || echo not-available)"'
+  - 'echo "Docker:        $(systemctl is-active docker 2>/dev/null || echo not-running)"'
+  - 'echo "Fail2ban:      $(systemctl is-active fail2ban 2>/dev/null || echo not-running)"'
+  - 'echo "Auditd:        $(systemctl is-active auditd 2>/dev/null || echo not-running)"'
+  - 'echo "Firewall:      $(iptables -L INPUT -n 2>/dev/null | head -1 || echo not-loaded)"'
+  - 'echo "VMware Tools:  $(vmware-toolbox-cmd -v 2>/dev/null || echo not-available)"'
   - 'echo "End time: $(date)"'
   - 'echo "### Cloud-init completed. Instance is ready."'
   - 'echo "### Connect via SSH, then run the AIdome installer (obtain URL from your AIdome account or support team)."'
