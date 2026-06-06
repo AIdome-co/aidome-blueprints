@@ -215,8 +215,15 @@ sudo bash bootstrap-desktop.sh \
 | `--ssh-key KEY` | SSH public key string for `aidome-ops` | _(required)_ |
 | `--ssh-key-file FILE` | Path to SSH public key file | _(alternative to --ssh-key)_ |
 | `--hostname NAME` | Set the VM hostname | _(keep current)_ |
-| `--allowed-ssh-cidr CIDR` | Restrict SSH to this CIDR | `0.0.0.0/0` |
+| `--allowed-ssh-cidr CIDR` | Management CIDR allowed to SSH (private network) | _(required)_ |
 | `--reboot` | Reboot after setup completes | _(no reboot)_ |
+
+### Network Posture
+
+- **Port 443 (HTTPS)** is open to **all sources** — this is the customer-facing interface.
+- **Port 22 (SSH)** is restricted to the `--allowed-ssh-cidr` only — management access from private networks.
+- The `DOCKER-USER` iptables chain allows public access to containers on port 443 while
+  restricting all other container ports to RFC1918 private sources.
 
 ### Ubuntu Server vs. Desktop
 

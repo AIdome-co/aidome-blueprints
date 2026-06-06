@@ -19,9 +19,9 @@
 #  10. Optionally reboots to apply all kernel/network settings
 #
 # Usage:
-#   sudo bash bootstrap-server.sh --ssh-key "ssh-ed25519 AAAA..."
-#   sudo bash bootstrap-server.sh --ssh-key-file /path/to/key.pub
-#   sudo bash bootstrap-server.sh --ssh-key "ssh-ed25519 AAAA..." --hostname myhost --reboot
+#   sudo bash bootstrap-server.sh --ssh-key "ssh-ed25519 AAAA..." --allowed-ssh-cidr 10.0.0.0/8
+#   sudo bash bootstrap-server.sh --ssh-key-file /path/to/key.pub --allowed-ssh-cidr 192.168.1.0/24
+#   sudo bash bootstrap-server.sh --ssh-key "ssh-ed25519 AAAA..." --hostname myhost --allowed-ssh-cidr 10.0.0.0/8 --reboot
 #
 # Requirements:
 #   - Ubuntu Server 22.04 LTS or 24.04 LTS
@@ -54,7 +54,7 @@ banner(){ echo -e "${BLUE}=== $* ===${NC}"; }
 VM_HOSTNAME=""
 SSH_PUBLIC_KEY=""
 SSH_KEY_FILE=""
-ALLOWED_SSH_CIDR="0.0.0.0/0"
+ALLOWED_SSH_CIDR=""
 DO_REBOOT="false"
 OPERATOR_USER="aidome-ops"
 SSH_PORT="22"
@@ -67,18 +67,26 @@ usage() {
   cat <<EOF
 Usage: sudo bash $(basename "$0") [OPTIONS]
 
-Required (one of):
+Required:
   --ssh-key KEY           SSH public key string for ${OPERATOR_USER}
+    OR
   --ssh-key-file FILE     Path to SSH public key file for ${OPERATOR_USER}
+
+  --allowed-ssh-cidr CIDR Management CIDR allowed to SSH (e.g. 10.0.0.0/8).
+                          SSH is private-network only — no default is provided
+                          to prevent accidental public exposure.
 
 Optional:
   --hostname NAME         Set the VM hostname (default: keep current)
-  --allowed-ssh-cidr CIDR Restrict SSH to this CIDR (default: 0.0.0.0/0)
   --reboot                Reboot after setup completes
   -h, --help              Show this help
 
+Network posture:
+  Port 443 (HTTPS) is open to ALL sources — this is the customer-facing interface.
+  Port 22  (SSH)   is restricted to --allowed-ssh-cidr only.
+
 Example:
-  sudo bash $(basename "$0") --ssh-key "ssh-ed25519 AAAA..." --hostname aidome-vsphere --reboot
+  sudo bash $(basename "$0") --ssh-key "ssh-ed25519 AAAA..." --allowed-ssh-cidr 10.0.0.0/8 --hostname aidome-vsphere --reboot
 EOF
   exit 0
 }
@@ -117,6 +125,12 @@ fi
 
 if [[ -z "$SSH_PUBLIC_KEY" ]]; then
   error "An SSH public key is required. Use --ssh-key or --ssh-key-file."
+  exit 1
+fi
+
+if [[ -z "$ALLOWED_SSH_CIDR" ]]; then
+  error "--allowed-ssh-cidr is required (e.g. 10.0.0.0/8, 192.168.1.0/24)."
+  error "SSH must be restricted to a private/management network."
   exit 1
 fi
 
@@ -188,6 +202,11 @@ APT::Get::Assume-Yes "true";
 Dpkg::Options::="--force-confdef";
 Dpkg::Options::="--force-confold";
 APTCONF
+
+# Remove conflicting Docker packages that may exist on a pre-installed VM
+# (per official Docker docs: https://docs.docker.com/engine/install/ubuntu/)
+apt-get remove -y docker.io docker-compose docker-compose-v2 docker-doc \
+  podman-docker containerd runc 2>/dev/null || true
 
 apt-get update -qq
 apt-get upgrade -y
@@ -497,7 +516,6 @@ mkdir -p /etc/iptables
 # IPv4 rules
 cat > /etc/iptables/rules.v4 <<EOF
 # Host-level defense-in-depth (VMware NSX or port group ACLs are the primary perimeter).
-# Restrict HTTPS inbound to RFC1918 private space.
 *filter
 :INPUT DROP [0:0]
 :FORWARD DROP [0:0]
@@ -510,18 +528,19 @@ cat > /etc/iptables/rules.v4 <<EOF
 
 -A INPUT -p icmp --icmp-type echo-request -j ACCEPT
 
-# SSH on port ${SSH_PORT} — restricted to management CIDR
+# SSH on port ${SSH_PORT} — restricted to management CIDR (private network only)
 -A INPUT -p tcp -s ${ALLOWED_SSH_CIDR} --dport ${SSH_PORT} -m conntrack --ctstate NEW -j ACCEPT
 
-# HTTPS from RFC1918 private IPv4 ranges
--A INPUT -s 10.0.0.0/8 -p tcp --dport 443 -j ACCEPT
--A INPUT -s 172.16.0.0/12 -p tcp --dport 443 -j ACCEPT
--A INPUT -s 192.168.0.0/16 -p tcp --dport 443 -j ACCEPT
+# HTTPS from ANY source — port 443 is the customer-facing interface
+-A INPUT -p tcp --dport 443 -m conntrack --ctstate NEW -j ACCEPT
 
-# DOCKER-USER chain -- Docker forwards traffic through FORWARD, not INPUT.
+# DOCKER-USER chain — Docker forwards traffic through FORWARD, not INPUT.
 # Rules here apply to container-published ports before Docker's own rules.
-# Allow only established/related and RFC1918 sources to reach containers.
+# (see https://docs.docker.com/engine/network/firewall-iptables/)
+# Allow any source to reach containers on port 443 (customer-facing).
+# Restrict all other container ports to RFC1918 private sources.
 -A DOCKER-USER -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
+-A DOCKER-USER -p tcp -m conntrack --ctorigdstport 443 --ctdir ORIGINAL -j RETURN
 -A DOCKER-USER -s 10.0.0.0/8 -j RETURN
 -A DOCKER-USER -s 172.16.0.0/12 -j RETURN
 -A DOCKER-USER -s 192.168.0.0/16 -j RETURN
@@ -541,11 +560,12 @@ cat > /etc/iptables/rules.v6 <<EOF
 -A INPUT -i lo -j ACCEPT
 -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 
-# SSH over IPv6 on port ${SSH_PORT}
--A INPUT -p tcp --dport ${SSH_PORT} -j ACCEPT
+# SSH over IPv6 — restricted to link-local and ULA (private networks)
+-A INPUT -s fe80::/10 -p tcp --dport ${SSH_PORT} -j ACCEPT
+-A INPUT -s fc00::/7 -p tcp --dport ${SSH_PORT} -j ACCEPT
 
-# HTTPS over IPv6 from ULA space
--A INPUT -s fc00::/7 -p tcp --dport 443 -j ACCEPT
+# HTTPS over IPv6 from ANY source — customer-facing
+-A INPUT -p tcp --dport 443 -m conntrack --ctstate NEW -j ACCEPT
 
 COMMIT
 EOF
