@@ -17,6 +17,7 @@
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
 - [Cloud-Init Scripts](#cloud-init-scripts)
+- [Bootstrap Scripts (Pre-Installed VMs)](#bootstrap-scripts-pre-installed-vms)
 - [Security & Hardening](#security--hardening)
 - [Secrets Handling](#secrets-handling)
 - [Verify the Installation](#verify-the-installation)
@@ -159,6 +160,9 @@ This blueprint uses VMware GuestInfo to pass two payloads to the guest:
 | [`scripts/cloud-init-deb.yaml`](scripts/cloud-init-deb.yaml) | Debian family — Terraform `templatefile()` variant with variables |
 | [`scripts/metadata.yaml`](scripts/metadata.yaml) | Hostname and static network configuration rendered by Terraform |
 
+If the customer provides a **pre-installed VM** (cloud-init already ran or was never configured),
+use the bootstrap scripts described in the next section instead.
+
 At first boot, cloud-init:
 
 1. sets the hostname and static network configuration
@@ -173,6 +177,61 @@ At first boot, cloud-init:
 7. applies iptables host-firewall rules with ICMP, RFC1918 HTTPS, and `DOCKER-USER` chain
 8. applies sysctl kernel/network hardening (CIS 1.5.2, 3.3.x)
 9. reboots to apply all kernel and network settings
+
+---
+
+## Bootstrap Scripts (Pre-Installed VMs)
+
+For customers who provide a pre-installed Ubuntu VM (where cloud-init was never configured or has
+already run), use these standalone bash scripts. They apply the same hardening as the cloud-init
+blueprint.
+
+| File | Target | Status |
+|---|---|---|
+| [`scripts/bootstrap-server.sh`](scripts/bootstrap-server.sh) | Ubuntu Server 22.04 / 24.04 LTS | **Recommended for production** |
+| [`scripts/bootstrap-desktop.sh`](scripts/bootstrap-desktop.sh) | Ubuntu Desktop 22.04 / 24.04 LTS | Lab / dev only — not recommended for production |
+
+### Usage
+
+```bash
+# Ubuntu Server (recommended)
+sudo bash bootstrap-server.sh \
+  --ssh-key "ssh-ed25519 AAAA..." \
+  --hostname aidome-vsphere \
+  --allowed-ssh-cidr 10.0.0.0/8 \
+  --reboot
+
+# Ubuntu Desktop (lab/dev only)
+sudo bash bootstrap-desktop.sh \
+  --ssh-key-file /path/to/key.pub \
+  --hostname aidome-lab \
+  --reboot
+```
+
+### Options
+
+| Flag | Description | Default |
+|---|---|---|
+| `--ssh-key KEY` | SSH public key string for `aidome-ops` | _(required)_ |
+| `--ssh-key-file FILE` | Path to SSH public key file | _(alternative to --ssh-key)_ |
+| `--hostname NAME` | Set the VM hostname | _(keep current)_ |
+| `--allowed-ssh-cidr CIDR` | Restrict SSH to this CIDR | `0.0.0.0/0` |
+| `--reboot` | Reboot after setup completes | _(no reboot)_ |
+
+### Ubuntu Server vs. Desktop
+
+**Ubuntu Server is the recommended platform for AIdome.** It has a smaller attack surface, lower
+resource overhead, and aligns with CIS benchmarks. The Desktop bootstrap script is provided for
+cases where Desktop is the only available option (lab, dev, PoC). It disables the GUI and
+desktop services but does not uninstall them.
+
+| Concern | Ubuntu Server | Ubuntu Desktop |
+|---|---|---|
+| Attack surface | Minimal — no GUI packages | Larger — GNOME, PulseAudio, Bluetooth, CUPS, etc. |
+| Resource overhead | ~250 MB base RAM | ~1.5 GB+ base RAM (with GUI running) |
+| Network manager | systemd-networkd / netplan | NetworkManager |
+| CIS benchmark target | Yes | Not officially scoped |
+| Production ready | Yes | No — lab/dev only |
 
 ---
 
@@ -294,20 +353,22 @@ blueprints/04-on-prem-vsphere/
 │   ├── variables.tf
 │   └── versions.tf
 └── scripts/
-    ├── cloud-init.yaml
-    ├── cloud-init-deb.yaml
-    └── metadata.yaml
+    ├── cloud-init.yaml          # Cloud-init: generic Ubuntu 24.04
+    ├── cloud-init-deb.yaml      # Cloud-init: Debian family (Terraform templatefile)
+    ├── metadata.yaml            # Cloud-init: network metadata
+    ├── bootstrap-server.sh      # Bash: pre-installed Ubuntu Server
+    └── bootstrap-desktop.sh     # Bash: Ubuntu Desktop → server conversion
 ```
 
 ---
 
 ## Supported Operating Systems
 
-This blueprint currently ships with one supported guest bootstrap path:
-
-| OS family | Status | File |
-|---|---|---|
-| Ubuntu 24.04 LTS cloud image | ✅ Supported | `scripts/cloud-init-deb.yaml` |
+| OS family | Method | Status | File |
+|---|---|---|---|
+| Ubuntu 24.04 LTS cloud image | Cloud-init | Supported | `scripts/cloud-init-deb.yaml` |
+| Ubuntu Server 22.04 / 24.04 LTS (pre-installed) | Bash script | Supported | `scripts/bootstrap-server.sh` |
+| Ubuntu Desktop 22.04 / 24.04 LTS (pre-installed) | Bash script | Lab / dev only | `scripts/bootstrap-desktop.sh` |
 
 If you need a RHEL-family or fully offline VMware variant, use this blueprint as the starting point
 and coordinate with the AIdome team.
