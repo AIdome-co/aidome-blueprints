@@ -174,7 +174,8 @@ At first boot, cloud-init:
    and `unattended-upgrades`
 6. applies CIS 4.1.x audit rules (time, identity, logins, privileged commands, file mods,
    sudoers, SSH keys, network sockets, kernel modules)
-7. applies iptables host-firewall rules with ICMP, RFC1918 HTTPS, and `DOCKER-USER` chain
+7. applies iptables host-firewall rules — HTTPS (443) open to all sources,
+   SSH (22) restricted to management networks, `DOCKER-USER` chain for containers
 8. applies sysctl kernel/network hardening (CIS 1.5.2, 3.3.x)
 9. reboots to apply all kernel and network settings
 
@@ -249,8 +250,9 @@ This blueprint applies secure defaults for an on-prem single-node deployment:
 - **Private-by-default network posture** — the VM is attached to an existing private port group
 - **Narrow SSH exposure** — inbound port `22` is restricted to the management CIDR you provide
 - **UEFI Secure Boot** — enabled by default in Terraform
-- **Host firewall** — iptables default-drop on inbound traffic plus a `DOCKER-USER` policy chain
-  restricting container-published ports to RFC1918 sources
+- **Host firewall** — iptables default-drop on inbound traffic; HTTPS (443) open to all sources
+  (customer-facing), SSH (22) restricted to management CIDR, `DOCKER-USER` chain allows
+  public access to containers on port 443 while restricting other container ports to RFC1918
 - **Outbound posture** — the host keeps `OUTPUT ACCEPT` so package installation, container image pulls,
   and the AIdome installer can reach approved upstream endpoints; if you require egress filtering,
   add explicit outbound allow rules before changing the default policy
