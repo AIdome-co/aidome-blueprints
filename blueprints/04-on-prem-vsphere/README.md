@@ -169,13 +169,13 @@ At first boot, cloud-init:
 2. creates the `aidome-ops` operator account with SSH key injection
 3. hardens SSH access (`PermitRootLogin no`, `PasswordAuthentication no`, `AllowUsers aidome-ops`,
    `LogLevel VERBOSE`, `ClientAliveInterval 300`)
-4. installs Docker Engine from Docker's official repository (auto-detects Ubuntu/Debian)
-5. installs and enables `open-vm-tools`, `fail2ban`, `auditd`, `netfilter-persistent`,
-   and `unattended-upgrades`
+4. removes conflicting distro packages and installs Docker Engine from Docker's official repository (auto-detects Ubuntu/Debian)
+5. installs and enables `open-vm-tools`, `fail2ban` (with `systemd` journal backend and `python3-systemd` to support modern journald-only Ubuntu minimal installations), `auditd`, `netfilter-persistent`, and `unattended-upgrades`
 6. applies CIS 4.1.x audit rules (time, identity, logins, privileged commands, file mods,
    sudoers, SSH keys, network sockets, kernel modules)
 7. applies iptables host-firewall rules — HTTPS (443) open to all sources,
-   SSH (22) restricted to management networks, `DOCKER-USER` chain for containers
+   SSH (22) restricted to management networks (IPv4) or private/ULA ranges (IPv6),
+   and `DOCKER-USER` chain for containers (allowing public 443 while limiting other container ports to RFC1918)
 8. applies sysctl kernel/network hardening (CIS 1.5.2, 3.3.x)
 9. reboots to apply all kernel and network settings
 
@@ -221,8 +221,8 @@ sudo bash bootstrap-desktop.sh \
 
 ### Network Posture
 
-- **Port 443 (HTTPS)** is open to **all sources** — this is the customer-facing interface.
-- **Port 22 (SSH)** is restricted to the `--allowed-ssh-cidr` only — management access from private networks.
+- **Port 443 (HTTPS)** is open to **all sources** over IPv4 and IPv6 — this is the customer-facing interface.
+- **Port 22 (SSH)** is restricted to the `--allowed-ssh-cidr` only (for IPv4) and Link-Local (`fe80::/10`) / Unique Local (`fc00::/7`) address spaces (for IPv6) — management access from private networks.
 - The `DOCKER-USER` iptables chain allows public access to containers on port 443 while
   restricting all other container ports to RFC1918 private sources.
 
@@ -250,9 +250,7 @@ This blueprint applies secure defaults for an on-prem single-node deployment:
 - **Private-by-default network posture** — the VM is attached to an existing private port group
 - **Narrow SSH exposure** — inbound port `22` is restricted to the management CIDR you provide
 - **UEFI Secure Boot** — enabled by default in Terraform
-- **Host firewall** — iptables default-drop on inbound traffic; HTTPS (443) open to all sources
-  (customer-facing), SSH (22) restricted to management CIDR, `DOCKER-USER` chain allows
-  public access to containers on port 443 while restricting other container ports to RFC1918
+- **Host firewall** — iptables default-drop on inbound traffic; HTTPS (443) open to all sources (customer-facing) over IPv4 and IPv6, SSH (22) restricted to the management CIDR (IPv4) or link-local (`fe80::/10`) and Unique Local Address (`fc00::/7`) ranges (for IPv6), and the `DOCKER-USER` chain allows public access to containers on port 443 while restricting other container ports to RFC1918 private sources.
 - **Outbound posture** — the host keeps `OUTPUT ACCEPT` so package installation, container image pulls,
   and the AIdome installer can reach approved upstream endpoints; if you require egress filtering,
   add explicit outbound allow rules before changing the default policy
@@ -261,11 +259,12 @@ This blueprint applies secure defaults for an on-prem single-node deployment:
   only and is intended for controlled operator automation; rotate SSH keys promptly if access changes
 - **Docker administration boundary** — `aidome-ops` joins the `docker` group intentionally, so treat
   it as a trusted operator account rather than an unprivileged application identity
+- **Docker conflict avoidance** — automatically purges legacy or distro-packaged Docker releases (like `docker.io`, `containerd`, `runc`) before executing a GPG-verified installation of the official Docker Engine to prevent daemon socket and configuration conflicts.
 - **CIS-aligned audit rules** — `auditd` enforces CIS 4.1.x controls (time, identity, logins,
   privileged commands, file modifications, sudoers, SSH keys, network sockets, kernel modules)
 - **Kernel/network hardening** — sysctl directives cover CIS 1.5.2 (ASLR), 3.3.x (IP forwarding,
   redirects, source routing, martian logging), and TCP SYN flood protection
-- **Intrusion prevention** — `fail2ban` protects SSH on port 22
+- **Intrusion prevention (`fail2ban`)** — fail2ban protects SSH on port 22. On Ubuntu 22.04+ minimal/cloud-image builds, auth logs are stored exclusively in journald (no `/var/log/auth.log`). To prevent silent initialization failures, fail2ban is explicitly configured with `backend = systemd` and the `python3-systemd` package dependency.
 - **Automatic security updates** — `unattended-upgrades` enabled via APT configuration
 
 If your environment includes VMware NSX, apply a distributed firewall policy in front of the VM as
@@ -303,7 +302,9 @@ Expected outcomes:
 - `cloud-init status --wait` completes successfully
 - Docker is active
 - `permitrootlogin no`, `passwordauthentication no`, and `allowusers aidome-ops` are present
-- iptables shows an allow rule only for your management CIDR on `tcp/22`
+- iptables shows an allow rule only for your management CIDR on `tcp/22` (IPv4), and Link-Local / ULA ranges on `tcp/22` (IPv6)
+- iptables shows port `tcp/443` open to all sources (IPv4 and IPv6)
+- `fail2ban-client status sshd` displays the active jail properly linked to the systemd journal backend without errors
 
 ---
 
