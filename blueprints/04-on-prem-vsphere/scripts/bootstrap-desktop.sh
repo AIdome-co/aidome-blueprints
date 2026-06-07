@@ -67,6 +67,7 @@ SSH_PUBLIC_KEY=""
 SSH_KEY_FILE=""
 ALLOWED_SSH_CIDR=""
 DO_REBOOT="false"
+DISABLE_DESKTOP_SERVICES=""  # Interactive prompt if not set (falls back to true if non-interactive)
 OPERATOR_USER="aidome-ops"
 SSH_PORT="22"
 DOCKER_GPG_FINGERPRINT="9DC858229FC7DD38854AE2D88D81803C0EBFCD88"
@@ -93,6 +94,8 @@ Required:
 Optional:
   --hostname NAME         Set the VM hostname (default: keep current)
   --reboot                Reboot after setup completes (recommended)
+  --disable-desktop       Disable desktop GUI and services (default if running non-interactively)
+  --keep-desktop          Keep desktop GUI and services active
   -h, --help              Show this help
 
 Network posture:
@@ -115,6 +118,8 @@ while [[ $# -gt 0 ]]; do
     --hostname)      VM_HOSTNAME="$2";    shift 2 ;;
     --allowed-ssh-cidr) ALLOWED_SSH_CIDR="$2"; shift 2 ;;
     --reboot)        DO_REBOOT="true";    shift   ;;
+    --disable-desktop) DISABLE_DESKTOP_SERVICES="true"; shift ;;
+    --keep-desktop)  DISABLE_DESKTOP_SERVICES="false"; shift ;;
     -h|--help)       usage ;;
     *) error "Unknown option: $1"; usage ;;
   esac
@@ -168,6 +173,32 @@ if [[ "$MAJOR_VERSION" -lt 22 ]]; then
   exit 1
 fi
 
+# Resolve interactive desktop services option if not set
+if [[ -z "$DISABLE_DESKTOP_SERVICES" ]]; then
+  if [[ -t 0 ]]; then
+    while true; do
+      echo -n -e "${YELLOW}[QUESTION]${NC} Disable desktop GUI and services (bluetooth, printing, audio, etc.)? [Y/n]: "
+      read -r response
+      response="${response:-y}"
+      case "$response" in
+        [yY]|[yY][eE][sS])
+          DISABLE_DESKTOP_SERVICES="true"
+          break
+          ;;
+        [nN]|[nN][oO])
+          DISABLE_DESKTOP_SERVICES="false"
+          break
+          ;;
+        *)
+          echo "Please answer yes (y) or no (n)."
+          ;;
+      esac
+    done
+  else
+    DISABLE_DESKTOP_SERVICES="true"
+  fi
+fi
+
 banner "AIdome VMware vSphere — Desktop-to-Server Bootstrap"
 warn "This script converts Ubuntu Desktop to a server configuration."
 warn "NOT RECOMMENDED FOR PRODUCTION — use Ubuntu Server instead."
@@ -175,72 +206,77 @@ log "OS: $PRETTY_NAME"
 log "Operator user: $OPERATOR_USER"
 log "SSH port: $SSH_PORT"
 log "Allowed SSH CIDR: $ALLOWED_SSH_CIDR"
+log "Disable desktop services: $DISABLE_DESKTOP_SERVICES"
 log "Start time: $(date -u)"
 
 # ==========================================================================
 # DESKTOP-SPECIFIC: Disable GUI and unnecessary desktop services
 # ==========================================================================
-banner "Disabling graphical desktop environment"
+if [[ "$DISABLE_DESKTOP_SERVICES" == "true" ]]; then
+  banner "Disabling graphical desktop environment"
 
-# Switch to multi-user (text) target — stops GDM/GNOME from starting on boot
-systemctl set-default multi-user.target
-log "Default boot target set to multi-user.target"
+  # Switch to multi-user (text) target — stops GDM/GNOME from starting on boot
+  systemctl set-default multi-user.target
+  log "Default boot target set to multi-user.target"
 
-# Stop the display manager now (GDM, LightDM, or SDDM)
-for dm in gdm3 gdm lightdm sddm; do
-  if systemctl is-active "$dm" &>/dev/null; then
-    systemctl stop "$dm" 2>/dev/null || true
-    log "Stopped display manager: $dm"
+  # Stop the display manager now (GDM, LightDM, or SDDM)
+  for dm in gdm3 gdm lightdm sddm; do
+    if systemctl is-active "$dm" &>/dev/null; then
+      systemctl stop "$dm" 2>/dev/null || true
+      log "Stopped display manager: $dm"
+    fi
+    if systemctl is-enabled "$dm" &>/dev/null; then
+      systemctl disable "$dm" 2>/dev/null || true
+      log "Disabled display manager: $dm"
+    fi
+  done
+
+  # Disable desktop-oriented services that waste resources on a server
+  banner "Disabling unnecessary desktop services"
+
+  DESKTOP_SERVICES=(
+    bluetooth.service
+    cups.service
+    cups-browsed.service
+    avahi-daemon.service
+    avahi-daemon.socket
+    ModemManager.service
+    switcheroo-control.service
+    power-profiles-daemon.service
+    colord.service
+    fwupd.service
+    whoopsie.service
+    kerneloops.service
+    apport.service
+    gpu-manager.service
+    thermald.service
+  )
+
+  for svc in "${DESKTOP_SERVICES[@]}"; do
+    if systemctl is-enabled "$svc" &>/dev/null; then
+      systemctl disable --now "$svc" 2>/dev/null || true
+      log "Disabled: $svc"
+    fi
+  done
+
+  # Mask PulseAudio system-wide (user socket/service — not maskable globally,
+  # but we can disable the system-wide fallback)
+  if systemctl is-enabled pulseaudio.service &>/dev/null; then
+    systemctl disable --now pulseaudio.service 2>/dev/null || true
+    systemctl mask pulseaudio.service 2>/dev/null || true
+    log "Disabled and masked: pulseaudio.service"
   fi
-  if systemctl is-enabled "$dm" &>/dev/null; then
-    systemctl disable "$dm" 2>/dev/null || true
-    log "Disabled display manager: $dm"
+  if systemctl is-enabled pulseaudio.socket &>/dev/null; then
+    systemctl disable --now pulseaudio.socket 2>/dev/null || true
+    log "Disabled: pulseaudio.socket"
   fi
-done
 
-# Disable desktop-oriented services that waste resources on a server
-banner "Disabling unnecessary desktop services"
-
-DESKTOP_SERVICES=(
-  bluetooth.service
-  cups.service
-  cups-browsed.service
-  avahi-daemon.service
-  avahi-daemon.socket
-  ModemManager.service
-  switcheroo-control.service
-  power-profiles-daemon.service
-  colord.service
-  fwupd.service
-  whoopsie.service
-  kerneloops.service
-  apport.service
-  gpu-manager.service
-  thermald.service
-)
-
-for svc in "${DESKTOP_SERVICES[@]}"; do
-  if systemctl is-enabled "$svc" &>/dev/null; then
-    systemctl disable --now "$svc" 2>/dev/null || true
-    log "Disabled: $svc"
-  fi
-done
-
-# Mask PulseAudio system-wide (user socket/service — not maskable globally,
-# but we can disable the system-wide fallback)
-if systemctl is-enabled pulseaudio.service &>/dev/null; then
-  systemctl disable --now pulseaudio.service 2>/dev/null || true
-  systemctl mask pulseaudio.service 2>/dev/null || true
-  log "Disabled and masked: pulseaudio.service"
+  # Disable automatic screen lock / power management (GNOME settings daemon)
+  # These run per-user but won't apply after GDM is disabled anyway
+  log "Desktop services disabled"
+else
+  log "Keeping desktop GUI and services enabled as requested"
 fi
-if systemctl is-enabled pulseaudio.socket &>/dev/null; then
-  systemctl disable --now pulseaudio.socket 2>/dev/null || true
-  log "Disabled: pulseaudio.socket"
-fi
-
-# Disable automatic screen lock / power management (GNOME settings daemon)
-# These run per-user but won't apply after GDM is disabled anyway
-log "Desktop services disabled"
 
 # --------------------------------------------------------------------------
 # Ensure SSH server is installed (Desktop may not ship with openssh-server)
@@ -402,6 +438,12 @@ cat > /etc/issue.net <<'BANNER'
 BANNER
 
 DISPLAY_HOSTNAME="${VM_HOSTNAME:-$(hostname)}"
+if [[ "$DISABLE_DESKTOP_SERVICES" == "true" ]]; then
+  BOOT_TARGET_INFO="multi-user.target (GUI disabled)"
+else
+  BOOT_TARGET_INFO="$(systemctl get-default 2>/dev/null || echo 'graphical.target') (GUI enabled)"
+fi
+
 cat > /etc/motd <<EOF
 
 Welcome to AIdome VMware vSphere (Desktop — Lab / Dev Only)
@@ -414,7 +456,7 @@ System Information:
 - Hostname: ${DISPLAY_HOSTNAME}
 - Docker: Docker Engine (rootful)
 - VMware Tools: open-vm-tools
-- Boot target: multi-user.target (GUI disabled)
+- Boot target: ${BOOT_TARGET_INFO}
 
 Quick Start — install AIdome:
 1. Connect via SSH
@@ -725,7 +767,11 @@ echo "VMware Tools:   $(vmware-toolbox-cmd -v 2>/dev/null || echo 'not available
 echo "Display manager: $(systemctl is-active gdm3 2>/dev/null || echo 'disabled')"
 echo "End time:       $(date -u)"
 
-log "Bootstrap completed. Desktop services disabled, server hardening applied."
+if [[ "$DISABLE_DESKTOP_SERVICES" == "true" ]]; then
+  log "Bootstrap completed. Desktop services disabled, server hardening applied."
+else
+  log "Bootstrap completed. Desktop services kept enabled, server hardening applied."
+fi
 log "Connect via SSH as $OPERATOR_USER, then run the AIdome installer"
 log "(obtain the URL from your AIdome account or support team)."
 warn "Reminder: Ubuntu Desktop is NOT recommended for production. Use Ubuntu Server."
@@ -734,7 +780,11 @@ warn "Reminder: Ubuntu Desktop is NOT recommended for production. Use Ubuntu Ser
 # Reboot (recommended for Desktop to fully stop GUI processes)
 # --------------------------------------------------------------------------
 if [[ "$DO_REBOOT" == "true" ]]; then
-  log "Rebooting in 5 seconds to apply kernel/network settings and fully stop GUI..."
+  if [[ "$DISABLE_DESKTOP_SERVICES" == "true" ]]; then
+    log "Rebooting in 5 seconds to apply kernel/network settings and fully stop GUI..."
+  else
+    log "Rebooting in 5 seconds to apply kernel/network settings..."
+  fi
   sleep 5
   reboot
 fi
